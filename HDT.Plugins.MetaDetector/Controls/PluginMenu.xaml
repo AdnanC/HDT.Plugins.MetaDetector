@@ -1,0 +1,9 @@
+﻿<MenuItem x:Class="HDT.Plugins.MetaDetector.Controls.PluginMenu"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:HDT.Plugins.MetaDetector.Controls"
+             mc:Ignorable="d"       
+             Header="Meta Detector" Margin="0" Padding="0,5" Click="MenuItem_Click">
+</MenuItem>
