@@ -34,7 +34,7 @@ namespace HDT.Plugins.MetaDetector.Controls
                 deck.Name = "Meta Deck";
                 lbDecks.Items.Add(deck);
             }*/
-            tbInformation.Text = "Waiting...";
+            tbInformation.Text = "Waiting For Card Play...";
             tbInformation.Foreground = Brushes.White;
             tbMetaRank.Text = "";            
         }
@@ -109,6 +109,19 @@ namespace HDT.Plugins.MetaDetector.Controls
         private void lbDecks_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
 
+        }
+
+        private void btnSaveDeck_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (lbDecks.SelectedIndex >= 0)
+            {
+                Deck temp = (Deck)lbDecks.SelectedItem;
+
+                temp.Name = "Meta Deck - " + temp.Class;
+
+                Hearthstone_Deck_Tracker.API.Core.MainWindow.SetNewDeck(temp);
+                Hearthstone_Deck_Tracker.API.Core.MainWindow.ActivateWindow();
+            }
         }
     }
 }

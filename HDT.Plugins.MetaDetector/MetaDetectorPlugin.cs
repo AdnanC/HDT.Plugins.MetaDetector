@@ -62,7 +62,9 @@ namespace HDT.Plugins.MetaDetector
         public void OnUnload()
         {
             if (_MetaDetector._statsUpdated)
+            {
                 _MetaDetector.SendDeckStats();
+            }
         }
 
         public void OnUpdate()
@@ -72,7 +74,7 @@ namespace HDT.Plugins.MetaDetector
 
         public Version Version
         {
-            get { return new Version(0, 0, 1); }
+            get { return new Version(0, 0, 2); }
         }
     }
 }

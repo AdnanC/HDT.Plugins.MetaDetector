@@ -6,16 +6,16 @@
              xmlns:local="clr-namespace:HDT.Plugins.MetaDetector.Controls"
              mc:Ignorable="d" WindowStartupLocation="CenterOwner" WindowStyle="ToolWindow" Width="356.872" Height="725.457" Title="Meta Detector" Closing="DeckWindow_Closing">
     <Grid>
-        <TextBlock x:Name="tbInformation" Margin="4,10,4,0" TextWrapping="NoWrap" Foreground="White" VerticalAlignment="Top" Background="#FF6F6F6F" Height="16"/>
+        <TextBlock x:Name="tbInformation" Margin="4,10,108,0" TextWrapping="NoWrap" Foreground="White" VerticalAlignment="Top" Height="16"/>
         <TextBlock x:Name="tbMetaRank" Margin="10,0,159,10" TextWrapping="Wrap" Foreground="#FFFDFDFD" Height="16" VerticalAlignment="Bottom"/>
-        <ListBox x:Name="lbDecks" HorizontalAlignment="Left" Margin="246,31,0,31" Width="93" SelectionChanged="lbDecks_SelectionChanged" MouseDown="lbDecks_MouseDown"/>
+        <ListBox x:Name="lbDecks" HorizontalAlignment="Left" Margin="246,49,0,31" Width="93" SelectionChanged="lbDecks_SelectionChanged" MouseDown="lbDecks_MouseDown"/>
         <ListView x:Name="lvDeckList" HorizontalAlignment="Left" 
                   Foreground="White" FontWeight="Bold" BorderThickness="1" 
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   
                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
                                     ScrollViewer.CanContentScroll="True" FontFamily="Arial"
-                  Margin="5,31,0,31"  Width="236" Height="auto">
+                  Margin="5,49,0,31"  Width="236" Height="auto">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <local:TemplateCard/>
@@ -23,6 +23,7 @@
             </ListView.ItemTemplate>
         </ListView>
         <TextBlock x:Name="tbCardsPlayed" Margin="195,0,10,10" TextWrapping="Wrap" Foreground="#FFFDFDFD" Height="16" VerticalAlignment="Bottom"/>
+        <Button x:Name="btnSaveDeck" Content="Save" Margin="0,6,30,0" VerticalAlignment="Top" Width="60" Click="btnSaveDeck_Click" HorizontalAlignment="Right"/>
 
     </Grid>
 </Window>
