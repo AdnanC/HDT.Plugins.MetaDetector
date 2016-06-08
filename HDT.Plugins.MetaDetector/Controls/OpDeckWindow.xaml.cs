@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Windows.Media;
 using System.Linq;
-using Hearthstone_Deck_Tracker.Utility.Logging;
+using HDT.Plugins.MetaDetector.Logging;
 using Hearthstone_Deck_Tracker.Hearthstone;
 
 namespace HDT.Plugins.MetaDetector.Controls
@@ -47,7 +47,7 @@ namespace HDT.Plugins.MetaDetector.Controls
 
         public void updateCardsCount(int count)
         {
-            tbCardsPlayed.Text = "Cards Matched: " + count.ToString();
+            tbCardsPlayed.Text = "Cards Revealed: " + count.ToString();
         }
 
         public void updateDeckList(List<Deck> metaDecks)
@@ -69,7 +69,7 @@ namespace HDT.Plugins.MetaDetector.Controls
             }
             catch(Exception ex)
             {
-                Log.Error(ex);
+                MetaLog.Error(ex);
             }
         }
 

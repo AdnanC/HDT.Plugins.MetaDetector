@@ -99,6 +99,7 @@
     <Compile Include="Controls\PluginMenu.xaml.cs">
       <DependentUpon>PluginMenu.xaml</DependentUpon>
     </Compile>
+    <Compile Include="MetaLog.cs" />
     <Compile Include="MetaDetector.cs" />
     <Compile Include="MetaDetectorPlugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

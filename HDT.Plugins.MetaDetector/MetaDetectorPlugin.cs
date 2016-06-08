@@ -56,7 +56,8 @@ namespace HDT.Plugins.MetaDetector
             GameEvents.OnGameStart.Add(_MetaDetector.GameStart);
             GameEvents.OnGameEnd.Add(_MetaDetector.GameEnd);
 
-            //_MainWindow.Show();
+            _MainWindow.Show();
+            _MainWindow.Visibility = System.Windows.Visibility.Hidden;
         }
 
         public void OnUnload()
@@ -74,7 +75,7 @@ namespace HDT.Plugins.MetaDetector
 
         public Version Version
         {
-            get { return new Version(0, 0, 2); }
+            get { return new Version(0, 0, 3); }
         }
     }
 }

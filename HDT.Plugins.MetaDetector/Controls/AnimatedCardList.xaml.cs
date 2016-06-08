@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Hearthstone_Deck_Tracker.Utility.Extensions;
-using Hearthstone_Deck_Tracker.Utility.Logging;
+using HDT.Plugins.MetaDetector.Logging;
 using Hearthstone_Deck_Tracker.Hearthstone;
 
 namespace HDT.Plugins.MetaDetector.Controls
@@ -77,7 +77,7 @@ namespace HDT.Plugins.MetaDetector.Controls
             }
             catch (Exception e)
             {
-                Log.Error(e);
+                MetaLog.Error(e);
             }
         }
 

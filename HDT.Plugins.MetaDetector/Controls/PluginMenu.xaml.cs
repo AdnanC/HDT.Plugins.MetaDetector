@@ -17,7 +17,8 @@ namespace HDT.Plugins.MetaDetector.Controls
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
-            _mainWindow.Show();
+            if (_mainWindow.Visibility == System.Windows.Visibility.Hidden || _mainWindow.Visibility == System.Windows.Visibility.Collapsed)
+                _mainWindow.Show();
         }
     }
 }

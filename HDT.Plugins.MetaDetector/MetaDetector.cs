@@ -13,13 +13,10 @@ using System.ComponentModel;
 using HearthDb.Enums;
 using Hearthstone_Deck_Tracker;
 using Hearthstone_Deck_Tracker.Enums;
-using Hearthstone_Deck_Tracker.Utility.Logging;
+using HDT.Plugins.MetaDetector.Logging;
 using Hearthstone_Deck_Tracker.Hearthstone;
-using Hearthstone_Deck_Tracker.Hearthstone.Entities;
 using HDT.Plugins.MetaDetector.Controls;
 using System.Text;
-using System.Collections.Specialized;
-using System.Configuration;
 
 namespace HDT.Plugins.MetaDetector
 {
@@ -37,7 +34,7 @@ namespace HDT.Plugins.MetaDetector
         private MyConfig _appConfig;
         private static string _deckDirectory = Path.Combine(Config.AppDataPath, @"MetaDetector");
         private static string _deckFilename = Path.Combine(_deckDirectory, @"metaDecks.xml");
-        private int _opponentCardCheck = 4;
+        private int _opponentCardCheck = 2;
         private int _opponentCardCount = 0;
         private int _opponentTurnCount = 0;
         internal bool _statsUpdated = false;
@@ -56,12 +53,17 @@ namespace HDT.Plugins.MetaDetector
 
             _appConfig = MyConfig.Load();
             _appConfig.Save();
+            MetaLog.Initialize();
 
             LoadMetaDecks();
+
+            MetaLog.Info("Meta Detector Initialized");
         }
 
         internal void GameStart()
         {
+            MetaLog.Info("Game Mode: " + Core.Game.CurrentGameMode);
+
             if (Core.Game.CurrentGameMode == GameMode.Arena ||
                 Core.Game.CurrentGameMode == GameMode.Brawl ||
                 Core.Game.CurrentGameMode == GameMode.Spectator)
@@ -71,13 +73,17 @@ namespace HDT.Plugins.MetaDetector
 
             if (_validGameMode)
             {
-                _opponentCardCheck = 4;
+                _opponentCardCheck = 2;
                 _opponentCardCount = 0;
                 _opponentTurnCount = 0;
 
-                _mainWindow.Show();
+                if (_mainWindow.Visibility == System.Windows.Visibility.Hidden || _mainWindow.Visibility == System.Windows.Visibility.Collapsed)
+                    _mainWindow.Show();
+
                 _mainWindow.updateCardsCount(_opponentCardCount);
                 _mainWindow.resetWindow(_metaDecks);
+
+                MetaLog.Info("New Game Started. Waiting for opponent to play cards.");
             }
         }
 
@@ -100,6 +106,7 @@ namespace HDT.Plugins.MetaDetector
         {
             if (_validGameMode)
             {
+                MetaLog.Info("Opponent Played: " + cardPlayed.Name);
                 _opponentCardsPlayed.Add(cardPlayed);
 
                 if (cardPlayed.Id != "GAME_005") //ignore the coin
@@ -117,13 +124,14 @@ namespace HDT.Plugins.MetaDetector
                 {
                     if (_statsUpdated)
                         SaveMetaDeckStats();
-                    _matchedDecks = _metaDecks;
+                    _matchedDecks = new List<Deck>(_metaDecks);
 
                     _mainWindow.updateText("Waiting for new Game...", Brushes.White);
+                    MetaLog.Info("Game Ended. Waiting for new Game");
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex);
+                    MetaLog.Error(ex);
                 }
         }
 
@@ -145,7 +153,8 @@ namespace HDT.Plugins.MetaDetector
                         }
                         else if (_matchedDecks.Count > 0)
                         {
-                            _mainWindow.updateCardsCount(_opponentCardCount);
+                            //_mainWindow.updateCardsCount(Core.Game.Opponent.RevealedEntities.Where(x => (x.IsInDeck || x.IsMinion || x.IsSpell || x.IsWeapon) && !x.Info.Created && !x.Info.Stolen).Count());
+                            _mainWindow.updateCardsCount(Core.Game.Opponent.OpponentCardList.Where(x => !x.IsCreated).Count());
 
                             if (_opponentCardCount > _opponentCardCheck)
                             {
@@ -163,40 +172,50 @@ namespace HDT.Plugins.MetaDetector
                             }
                         }
 
-                        _mainWindow.updateDeckList(displayDecks);
+                        if (displayDecks != null)
+                            _mainWindow.updateDeckList(displayDecks);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex);
+                    MetaLog.Error(ex);
                 }
         }
 
         public bool checkNewVersion()
         {
-            string currentVersion = _appConfig.currentVersion;
-            DateTime lastCheck = _appConfig.lastCheck;
-
-            if ((DateTime.Now - lastCheck).TotalDays > 3)
+            try
             {
-                WebClient client = new WebClient();
-                String versionNumber = client.DownloadString("http://www.desi-radio.com/metaversion.php");
+                string currentVersion = _appConfig.currentVersion;
+                DateTime lastCheck = _appConfig.lastCheck;
 
-                if (versionNumber.Trim() != "")
+                if ((DateTime.Now - lastCheck).TotalDays > 3)
                 {
-                    if (versionNumber != currentVersion)
-                    {
-                        DownloadMetaFile();
+                    MetaLog.Info("Checking for new version of Meta File");
+                    WebClient client = new WebClient();
+                    String versionNumber = client.DownloadString("http://ec2-54-88-223-252.compute-1.amazonaws.com/metaversion.php");
 
-                        _appConfig.currentVersion = versionNumber;
-                        _appConfig.lastCheck = DateTime.Now;
-                        _appConfig.Save();
-                        return true;
+                    if (versionNumber.Trim() != "")
+                    {
+                        if (versionNumber != currentVersion)
+                        {
+                            DownloadMetaFile();
+
+                            _appConfig.currentVersion = versionNumber;
+                            _appConfig.lastCheck = DateTime.Now;
+                            _appConfig.Save();
+                            return true;
+                        }
                     }
                 }
-            }
 
-            return false;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
+                return false;
+            }
         }
 
         private void LoadMetaDecks()
@@ -209,7 +228,7 @@ namespace HDT.Plugins.MetaDetector
                 if (File.Exists(_deckFilename))
                 {
                     _metaDecks = XmlManager<List<Deck>>.Load(_deckFilename);
-                    _matchedDecks = _metaDecks;
+                    _matchedDecks = new List<Deck>(_metaDecks);
 
                     //_mainWindow.updateDeckList(_metaDecks);
                     //Log.Info(code.ToString());
@@ -226,7 +245,7 @@ namespace HDT.Plugins.MetaDetector
             }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                MetaLog.Error(ex);
             }
         }
 
@@ -261,7 +280,7 @@ namespace HDT.Plugins.MetaDetector
             catch (Exception ex)
             {
                 _mainWindow.updateText("Unable to download Meta File.", Brushes.PaleVioletRed);
-                Log.Error(ex);
+                MetaLog.Error(ex);
             }
         }
 
@@ -287,7 +306,7 @@ namespace HDT.Plugins.MetaDetector
             }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                MetaLog.Error(ex);
             }
         }
 
@@ -311,7 +330,7 @@ namespace HDT.Plugins.MetaDetector
             }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                MetaLog.Error(ex);
             }
         }
 
@@ -334,16 +353,38 @@ namespace HDT.Plugins.MetaDetector
                         _mainWindow.updateText("No Match Found. Showing Closest Decks", Brushes.YellowGreen);
 
                         validDecks = _metaDecks.Where(x => x.Class == Core.Game.Opponent.Class).ToList();
-                        validDecks = validDecks.Where(x => x.Cards.Contains((Card)_opponentCardsPlayed.Where(p => p.Count > 0))).ToList();
-                        _matchedDecks = validDecks;
+
+                        _matchedDecks = new List<Deck>(validDecks);
+
+                        validDecks.Clear();
+                        int lastCount = 0;
+                        foreach (Deck d in _matchedDecks.OrderBy(x => Convert.ToInt16(x.Note)))
+                        {
+                            int count = d.Cards.Intersect(_opponentCardsPlayed).Count();
+                            if (count > 0)
+                            {
+                                if(count >= lastCount)
+                                {
+                                    validDecks.Insert(0, d);
+                                    lastCount = count;
+                                }
+                                else
+                                {
+                                    validDecks.Add(d);
+                                }                                
+                            }
+                        }
+                        _matchedDecks = new List<Deck>(validDecks);
 
                         if (validDecks.Count > 10)
-                            validDecks = validDecks.Where(x => x.Cards.Contains((Card)_opponentCardsPlayed.Where(p => p.Count > 0))).Take(10).ToList();
+                        {
+                            validDecks = validDecks.OrderByDescending(x => Convert.ToInt16(x.Note)).Take(10).ToList();
+                        }
 
                         return validDecks;
                     }
 
-                    _matchedDecks = validDecks;
+                    _matchedDecks = new List<Deck>(validDecks);
 
                     if (validDecks.Count > 20)
                         validDecks = validDecks.Where(x => cardEntites.Any(ce => x.GetSelectedDeckVersion().Cards.Any(c => c.Id == ce.Key))).Take(20).ToList();
@@ -354,7 +395,7 @@ namespace HDT.Plugins.MetaDetector
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex);
+                    MetaLog.Error(ex);
                     return null;
                 }
             }
@@ -375,13 +416,13 @@ namespace HDT.Plugins.MetaDetector
             {
                 if ((DateTime.Now - _appConfig.lastUpload).TotalDays > 1)
                 {
-                    string url = "http://www.desi-radio.com/meta.php";
+                    string url = "http://ec2-54-88-223-252.compute-1.amazonaws.com/meta.php";
 
                     List<KeyValuePair<string, string>> deckStats = new List<KeyValuePair<string, string>>();
                     StringBuilder builder = new StringBuilder();
 
 
-                    foreach (Deck d in _metaDecks.Where(x => x.Note != "0" ) )
+                    foreach (Deck d in _metaDecks.Where(x => x.Note != "0"))
                     {
                         builder.Append(d.DeckId.ToString()).Append(":").Append(d.Note).Append(',');
                     }
@@ -418,7 +459,7 @@ namespace HDT.Plugins.MetaDetector
                     catch (Exception ex)
                     {
                         //throw or return an appropriate response/exception
-                        Log.Error(ex);
+                        MetaLog.Error(ex);
                     }
 
                     _appConfig.lastUpload = DateTime.Now;
@@ -457,7 +498,7 @@ namespace HDT.Plugins.MetaDetector
             }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                MetaLog.Error(ex);
             }
         }
     }
@@ -499,7 +540,7 @@ namespace HDT.Plugins.MetaDetector
             }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                MetaLog.Error(ex);
                 return null;
             }
         }
@@ -517,7 +558,7 @@ namespace HDT.Plugins.MetaDetector
             }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                MetaLog.Error(ex);
             }
         }
     }
