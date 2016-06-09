@@ -60,16 +60,18 @@ namespace HDT.Plugins.MetaDetector
             MetaLog.Info("Meta Detector Initialized");
         }
 
+        private void checkGameMode()
+        {
+            //if (Core.Game.CurrentGameMode == GameMode.All)
+            _validGameMode = true;
+            //else
+            //_validGameMode = false;
+        }
+
         internal void GameStart()
         {
             MetaLog.Info("Game Mode: " + Core.Game.CurrentGameMode);
-
-            if (Core.Game.CurrentGameMode == GameMode.Arena ||
-                Core.Game.CurrentGameMode == GameMode.Brawl ||
-                Core.Game.CurrentGameMode == GameMode.Spectator)
-                _validGameMode = false;
-            else
-                _validGameMode = true;
+            checkGameMode();
 
             if (_validGameMode)
             {
@@ -77,8 +79,8 @@ namespace HDT.Plugins.MetaDetector
                 _opponentCardCount = 0;
                 _opponentTurnCount = 0;
 
-                if (_mainWindow.Visibility == System.Windows.Visibility.Hidden || _mainWindow.Visibility == System.Windows.Visibility.Collapsed)
-                    _mainWindow.Show();
+                //if (_mainWindow.Visibility == System.Windows.Visibility.Hidden || _mainWindow.Visibility == System.Windows.Visibility.Collapsed)
+                //    _mainWindow.Show();
 
                 _mainWindow.updateCardsCount(_opponentCardCount);
                 _mainWindow.resetWindow(_metaDecks);
@@ -89,6 +91,8 @@ namespace HDT.Plugins.MetaDetector
 
         internal void TurnStart(ActivePlayer activePlayer)
         {
+            checkGameMode();
+
             if (_validGameMode)
             {
                 if (ActivePlayer.Player == activePlayer)
@@ -342,10 +346,11 @@ namespace HDT.Plugins.MetaDetector
                 {
                     var validDecks = _metaDecks.Where(x => x.Class == Core.Game.Opponent.Class).ToList();
 
-                    var cardEntites = Core.Game.Opponent.RevealedEntities.Where(x => (x.IsMinion || x.IsSpell || x.IsWeapon) && !x.Info.Created && !x.Info.Stolen).GroupBy(x => x.CardId).ToList();
+                    //var cardEntites = Core.Game.Opponent.RevealedEntities.Where(x => (x.IsMinion || x.IsSpell || x.IsWeapon) && !x.Info.Created && !x.Info.Stolen).GroupBy(x => x.CardId).ToList();
+                    var cardEntites = Core.Game.Opponent.OpponentCardList.Where(x => !x.IsCreated).ToList();
 
                     if (validDecks.Count > 1 && cardEntites != null)
-                        validDecks = validDecks.Where(x => cardEntites.All(ce => x.GetSelectedDeckVersion().Cards.Any(c => c.Id == ce.Key && c.Count >= ce.Count()))).ToList();
+                        validDecks = validDecks.Where(x => cardEntites.All(ce => x.GetSelectedDeckVersion().Cards.Any(c => c.Id == ce.Id && c.Count >= ce.Count))).ToList();
 
 
                     if (validDecks.Count == 0)
@@ -360,10 +365,10 @@ namespace HDT.Plugins.MetaDetector
                         int lastCount = 0;
                         foreach (Deck d in _matchedDecks.OrderBy(x => Convert.ToInt16(x.Note)))
                         {
-                            int count = d.Cards.Intersect(_opponentCardsPlayed).Count();
+                            int count = d.Cards.Intersect(Core.Game.Opponent.PlayerCardList.Where(x => !x.IsCreated)).ToList().Count();
                             if (count > 0)
                             {
-                                if(count >= lastCount)
+                                if (count >= lastCount)
                                 {
                                     validDecks.Insert(0, d);
                                     lastCount = count;
@@ -371,14 +376,14 @@ namespace HDT.Plugins.MetaDetector
                                 else
                                 {
                                     validDecks.Add(d);
-                                }                                
+                                }
                             }
                         }
                         _matchedDecks = new List<Deck>(validDecks);
 
                         if (validDecks.Count > 10)
                         {
-                            validDecks = validDecks.OrderByDescending(x => Convert.ToInt16(x.Note)).Take(10).ToList();
+                            validDecks = validDecks.Take(10).ToList();
                         }
 
                         return validDecks;
@@ -387,7 +392,7 @@ namespace HDT.Plugins.MetaDetector
                     _matchedDecks = new List<Deck>(validDecks);
 
                     if (validDecks.Count > 20)
-                        validDecks = validDecks.Where(x => cardEntites.Any(ce => x.GetSelectedDeckVersion().Cards.Any(c => c.Id == ce.Key))).Take(20).ToList();
+                        validDecks = validDecks.Where(x => cardEntites.Any(ce => x.GetSelectedDeckVersion().Cards.Any(c => c.Id == ce.Id))).Take(20).ToList();
 
                     _mainWindow.updateText(_matchedDecks.Count + " Matching Deck(s) Found", Brushes.LightGreen);
 
@@ -406,7 +411,7 @@ namespace HDT.Plugins.MetaDetector
         public void SaveMetaDeckStats()
         {
             if (_validGameMode)
-                if (Core.Game.CurrentGameMode == GameMode.Ranked && Core.Game.CurrentFormat == Format.Standard)
+                if (Core.Game.CurrentFormat == Format.Standard && Core.Game.CurrentGameMode == GameMode.Ranked)
                     XmlManager<List<Deck>>.Save(_deckFilename, _metaDecks);
         }
 

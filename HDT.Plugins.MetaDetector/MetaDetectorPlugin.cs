@@ -51,13 +51,15 @@ namespace HDT.Plugins.MetaDetector
 
             _MetaDetector = new MetaDetector(_MainWindow);
 
+            _MainWindow.updateVersion(Version);
+
             GameEvents.OnTurnStart.Add(_MetaDetector.TurnStart);
             GameEvents.OnOpponentPlay.Add(_MetaDetector.OpponentPlay);
             GameEvents.OnGameStart.Add(_MetaDetector.GameStart);
             GameEvents.OnGameEnd.Add(_MetaDetector.GameEnd);
 
-            _MainWindow.Show();
-            _MainWindow.Visibility = System.Windows.Visibility.Hidden;
+            //_MainWindow.Show();
+            //_MainWindow.Visibility = System.Windows.Visibility.Hidden;
         }
 
         public void OnUnload()
@@ -75,7 +77,7 @@ namespace HDT.Plugins.MetaDetector
 
         public Version Version
         {
-            get { return new Version(0, 0, 3); }
+            get { return new Version(0, 0, 4); }
         }
     }
 }

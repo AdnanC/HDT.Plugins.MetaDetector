@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Linq;
 using HDT.Plugins.MetaDetector.Logging;
 using Hearthstone_Deck_Tracker.Hearthstone;
+using System.Windows.Navigation;
 
 namespace HDT.Plugins.MetaDetector.Controls
 {
@@ -48,6 +49,11 @@ namespace HDT.Plugins.MetaDetector.Controls
         public void updateCardsCount(int count)
         {
             tbCardsPlayed.Text = "Cards Revealed: " + count.ToString();
+        }
+
+        public void updateVersion(Version pluginVersion)
+        {
+            tbVersion.Text = "v" + pluginVersion.ToString();
         }
 
         public void updateDeckList(List<Deck> metaDecks)
@@ -121,6 +127,18 @@ namespace HDT.Plugins.MetaDetector.Controls
 
                 Hearthstone_Deck_Tracker.API.Core.MainWindow.SetNewDeck(temp);
                 Hearthstone_Deck_Tracker.API.Core.MainWindow.ActivateWindow();
+            }
+        }
+
+        private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(e.Uri.ToString());
+            }
+            catch(Exception ex)
+            {
+                MetaLog.Error(ex);
             }
         }
     }
