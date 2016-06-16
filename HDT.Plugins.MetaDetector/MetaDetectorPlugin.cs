@@ -1,10 +1,10 @@
 ﻿using System;
-using System.IO;
 using System.Windows.Controls;
 using Hearthstone_Deck_Tracker.API;
-using Hearthstone_Deck_Tracker.Utility.Logging;
 using Hearthstone_Deck_Tracker.Plugins;
 using HDT.Plugins.MetaDetector.Controls;
+using HDT.Plugins.MetaDetector.Logging;
+using System.Threading.Tasks;
 
 namespace HDT.Plugins.MetaDetector
 {
@@ -12,7 +12,8 @@ namespace HDT.Plugins.MetaDetector
     {
         private MenuItem _MetaDetectorMenuItem;
         private OpDeckWindow _MainWindow = null;
-        private MetaDetector _MetaDetector;
+        private MetaDetector _MetaDetector = null;
+
         public string Author
         {
             get { return "AdnanC"; }
@@ -25,7 +26,7 @@ namespace HDT.Plugins.MetaDetector
 
         public string Description
         {
-            get { return "Show which deck opponent might be playing"; }
+            get { return "Shows which deck opponent might be playing"; }
         }
 
         public MenuItem MenuItem
@@ -41,33 +42,41 @@ namespace HDT.Plugins.MetaDetector
 
         public void OnButtonPress()
         {
+
         }
 
         public void OnLoad()
         {
-            _MainWindow = new OpDeckWindow();
+            if (_MainWindow == null)
+            {
+                
+                _MainWindow = new OpDeckWindow();
 
-            _MetaDetectorMenuItem = new PluginMenu(_MainWindow);
+                _MetaDetectorMenuItem = new PluginMenu(_MainWindow);
 
-            _MetaDetector = new MetaDetector(_MainWindow);
+                _MetaDetector = new MetaDetector(_MainWindow);
 
-            _MainWindow.updateVersion(Version);
+                _MainWindow.updateVersion(Version);
 
-            GameEvents.OnTurnStart.Add(_MetaDetector.TurnStart);
-            GameEvents.OnOpponentPlay.Add(_MetaDetector.OpponentPlay);
-            GameEvents.OnGameStart.Add(_MetaDetector.GameStart);
-            GameEvents.OnGameEnd.Add(_MetaDetector.GameEnd);
+                GameEvents.OnTurnStart.Add(_MetaDetector.TurnStart);
+                GameEvents.OnOpponentPlay.Add(_MetaDetector.OpponentPlay);
+                GameEvents.OnGameStart.Add(_MetaDetector.GameStart);
+                GameEvents.OnGameEnd.Add(_MetaDetector.GameEnd);
 
-            //_MainWindow.Show();
-            //_MainWindow.Visibility = System.Windows.Visibility.Hidden;
+                CheckForUpdate();
+
+                //_MainWindow.Show();
+                //_MainWindow.Visibility = System.Windows.Visibility.Hidden;
+                MetaLog.Info("Plugin Load Successful");
+            }
         }
 
         public void OnUnload()
         {
-            if (_MetaDetector._statsUpdated)
-            {
-                _MetaDetector.SendDeckStats();
-            }
+            _MainWindow.Close();
+            _MetaDetector = null;
+            _MainWindow = null;
+            MetaLog.Info("Plugin Unload Successful");
         }
 
         public void OnUpdate()
@@ -77,7 +86,16 @@ namespace HDT.Plugins.MetaDetector
 
         public Version Version
         {
-            get { return new Version(0, 0, 4); }
+            get { return new Version(0, 0, 5); }
+        }
+
+        private async void CheckForUpdate()
+        {
+            var latest = await GitHub.CheckForUpdate("adnanc", "HDT.Plugins.MetaDetector", Version);
+            if (latest != null)
+            {
+                _MainWindow.newVersionAvailable();
+            }
         }
     }
 }

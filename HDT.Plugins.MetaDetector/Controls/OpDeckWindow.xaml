@@ -24,11 +24,18 @@
         </ListView>
         <TextBlock x:Name="tbCardsPlayed" Margin="195,0,10,40" TextWrapping="Wrap" Foreground="#FFFDFDFD" Height="16" VerticalAlignment="Bottom"/>
         <Button x:Name="btnSaveDeck" Content="Save Deck" Margin="0,6,21,0" VerticalAlignment="Top" Width="69" Click="btnSaveDeck_Click" HorizontalAlignment="Right"/>
-        <TextBlock x:Name="tbWebsite" HorizontalAlignment="Left" Margin="123,0,0,6" TextWrapping="Wrap" VerticalAlignment="Bottom" Height="29" Width="216" Padding="0,5,0,0">
+        <TextBlock x:Name="tbWebsite" HorizontalAlignment="Left" Margin="123,0,0,6" TextWrapping="Wrap" VerticalAlignment="Bottom" Height="29" Width="216" Padding="0,5,0,0" Visibility="Visible">
+            <Hyperlink 
+                NavigateUri="https://github.com/adnanc/HDT.Plugins.MetaDetector/issues"
+                RequestNavigate="Hyperlink_RequestNavigate" TextDecorations="{x:Null}" Foreground="#FF5CA5EE">
+                Click Here for Suggestions or Bugs
+            </Hyperlink>
+        </TextBlock>
+        <TextBlock x:Name="tbNewVersion" HorizontalAlignment="Left" Margin="123,0,0,6" TextWrapping="Wrap" VerticalAlignment="Bottom" Height="29" Width="216" Padding="0,5,0,0" Visibility="Hidden">
             <Hyperlink 
                 NavigateUri="https://github.com/adnanc/HDT.Plugins.MetaDetector/releases"
-                RequestNavigate="Hyperlink_RequestNavigate" TextDecorations="{x:Null}">
-                Click here to check for latest version
+                RequestNavigate="Hyperlink_RequestNavigate" TextDecorations="{x:Null}" Foreground="#FFF50707">
+                ** New Version Available **
             </Hyperlink>
         </TextBlock>
         <TextBlock x:Name="tbVersion" HorizontalAlignment="Left" Margin="31,0,0,6" TextWrapping="Wrap" VerticalAlignment="Bottom" Height="29" Width="87" Foreground="White" Padding="0,4,0,0"/>

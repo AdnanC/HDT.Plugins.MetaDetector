@@ -6,11 +6,8 @@ using System.Windows.Media;
 using System.Linq;
 using System.Net;
 using System.Xml.Serialization;
-//using System.Net.Http;
 using System.Threading.Tasks;
-//using System.Web.Script.Serialization;
 using System.ComponentModel;
-using HearthDb.Enums;
 using Hearthstone_Deck_Tracker;
 using Hearthstone_Deck_Tracker.Enums;
 using HDT.Plugins.MetaDetector.Logging;
@@ -32,16 +29,20 @@ namespace HDT.Plugins.MetaDetector
         private List<Deck> _matchedDecks;
         private List<Card> _opponentCardsPlayed;
         private MyConfig _appConfig;
+        private trackCards _cardsPlayed;
         private static string _deckDirectory = Path.Combine(Config.AppDataPath, @"MetaDetector");
         private static string _deckFilename = Path.Combine(_deckDirectory, @"metaDecks.xml");
         private int _opponentCardCheck = 2;
         private int _opponentCardCount = 0;
         private int _opponentTurnCount = 0;
+        private int _bestMetaRank = 0;
+        private int _metaRank = 0;
         internal bool _statsUpdated = false;
+        private bool _closestMatchedDecks = false;
 
         public MetaDetector(OpDeckWindow mainWindow)
         {
-            _mainWindow = new OpDeckWindow();
+            //_mainWindow = new OpDeckWindow();
             _mainWindow = mainWindow;
             _lastGuessDeck = new Deck();
 
@@ -51,13 +52,13 @@ namespace HDT.Plugins.MetaDetector
 
             _opponentCardsPlayed = new List<Card>();
 
+            _cardsPlayed = new trackCards();
+
             _appConfig = MyConfig.Load();
             _appConfig.Save();
             MetaLog.Initialize();
 
-            LoadMetaDecks();
-
-            MetaLog.Info("Meta Detector Initialized");
+            MetaLog.Info("Meta Detector Initialized", "MetaDetector");
         }
 
         private void checkGameMode()
@@ -70,7 +71,9 @@ namespace HDT.Plugins.MetaDetector
 
         internal void GameStart()
         {
-            MetaLog.Info("Game Mode: " + Core.Game.CurrentGameMode);
+            MetaLog.Info("Game Mode: " + Core.Game.CurrentGameMode, "GameStart");
+            LoadMetaDecks();
+            _cardsPlayed.Clear();
             checkGameMode();
 
             if (_validGameMode)
@@ -78,6 +81,10 @@ namespace HDT.Plugins.MetaDetector
                 _opponentCardCheck = 2;
                 _opponentCardCount = 0;
                 _opponentTurnCount = 0;
+                _bestMetaRank = 0;
+                _metaRank = 0;
+                _closestMatchedDecks = false;
+                _statsUpdated = false;
 
                 //if (_mainWindow.Visibility == System.Windows.Visibility.Hidden || _mainWindow.Visibility == System.Windows.Visibility.Collapsed)
                 //    _mainWindow.Show();
@@ -85,32 +92,39 @@ namespace HDT.Plugins.MetaDetector
                 _mainWindow.updateCardsCount(_opponentCardCount);
                 _mainWindow.resetWindow(_metaDecks);
 
-                MetaLog.Info("New Game Started. Waiting for opponent to play cards.");
+                MetaLog.Info("New Game Started. Waiting for opponent to play cards.", "GameStart");
             }
         }
 
         internal void TurnStart(ActivePlayer activePlayer)
         {
-            checkGameMode();
-
-            if (_validGameMode)
+            try
             {
-                if (ActivePlayer.Player == activePlayer)
+                checkGameMode();
+
+                if (_validGameMode)
                 {
-                    updateDecks();
+                    if (ActivePlayer.Player == activePlayer)
+                    {
+                        updateDecks();
+                    }
+                    else
+                    {
+                        _opponentTurnCount++;
+                    }
                 }
-                else
-                {
-                    _opponentTurnCount++;
-                }
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
             }
         }
 
-        internal void OpponentPlay(Card cardPlayed)
+        public void OpponentPlay(Card cardPlayed)
         {
             if (_validGameMode)
             {
-                MetaLog.Info("Opponent Played: " + cardPlayed.Name);
+                MetaLog.Info("Opponent Played: " + cardPlayed.Name, "OpponentPlay");
                 _opponentCardsPlayed.Add(cardPlayed);
 
                 if (cardPlayed.Id != "GAME_005") //ignore the coin
@@ -119,27 +133,56 @@ namespace HDT.Plugins.MetaDetector
                     updateDecks();
                 }
             }
+
+            _cardsPlayed.Add(cardPlayed.Id, _opponentTurnCount);
         }
 
-        internal void GameEnd()
+        public async void GameEnd()
         {
+
             if (_validGameMode)
                 try
                 {
-                    if (_statsUpdated)
+                    MetaLog.Info("Matched Decks: " + _matchedDecks.Count);
+
+                    if (_matchedDecks.Count <= 30)
+                    {
+                        _metaRank = _opponentCardCount;
+                    }
+
+                    if (_matchedDecks.Count <= 10)
+                    {
+                        _bestMetaRank = _opponentTurnCount;
+                    }
+
+                    if (_metaRank > 0 || _bestMetaRank > 0)
+                    {
+                        MetaLog.Info("Updating ranks (" + _metaRank + "+" + _bestMetaRank + ") for " + _matchedDecks.Count + " deck(s).", "GameEnd");
+
+                        foreach (Deck d in _matchedDecks)
+                        {
+                            _metaDecks.Find(x => x.DeckId == d.DeckId).Note = (Convert.ToInt32(_metaDecks.Find(x => x.DeckId == d.DeckId).Note) + _metaRank + _bestMetaRank).ToString();
+                        }
+
                         SaveMetaDeckStats();
+                        await sendMetaRanks();
+                    }
+
                     _matchedDecks = new List<Deck>(_metaDecks);
 
                     _mainWindow.updateText("Waiting for new Game...", Brushes.White);
-                    MetaLog.Info("Game Ended. Waiting for new Game");
+                    MetaLog.Info("Game Ended. Waiting for new Game", "GameEnd");
                 }
                 catch (Exception ex)
                 {
                     MetaLog.Error(ex);
                 }
+
+            _cardsPlayed.Save();
+            await sendCardStats();
         }
 
-        private void updateDecks()
+        internal void updateDecks()
         {
             if (_validGameMode)
                 try
@@ -150,31 +193,33 @@ namespace HDT.Plugins.MetaDetector
                     {
                         displayDecks = matchMetaDeck();
 
-                        if (_matchedDecks.Count == 0 || _matchedDecks == null)
+                        _mainWindow.updateCardsCount(Core.Game.Opponent.OpponentCardList.Where(x => !x.IsCreated).Count());
+
+                        if (_matchedDecks.Count == 0)
                         {
                             _mainWindow.updateText("No Decks Found.", Brushes.IndianRed);
+                            _statsUpdated = false;
                             return;
                         }
-                        else if (_matchedDecks.Count > 0)
+                        /*else if (_matchedDecks.Count > 0 && !_closestMatchedDecks)
                         {
                             //_mainWindow.updateCardsCount(Core.Game.Opponent.RevealedEntities.Where(x => (x.IsInDeck || x.IsMinion || x.IsSpell || x.IsWeapon) && !x.Info.Created && !x.Info.Stolen).Count());
-                            _mainWindow.updateCardsCount(Core.Game.Opponent.OpponentCardList.Where(x => !x.IsCreated).Count());
-
                             if (_opponentCardCount > _opponentCardCheck)
                             {
                                 _opponentCardCheck = _opponentCardCount;
 
-                                if (_opponentCardCount > 5)
+                                if (_matchedDecks.Count <= 30)
                                 {
-                                    int count = _opponentCardCount;
-                                    foreach (Deck d in _matchedDecks)
-                                    {
-                                        _metaDecks.Find(x => x.DeckId == d.DeckId).Note = (Convert.ToInt32(_metaDecks.Find(x => x.DeckId == d.DeckId).Note) + count).ToString();
-                                    }
-                                    _statsUpdated = true;
+                                    _metaRank = _opponentCardCount;
+                                }
+
+                                if (_matchedDecks.Count <= 10)
+                                {
+                                    _bestMetaRank = _opponentTurnCount;
                                 }
                             }
-                        }
+
+                        }*/
 
                         if (displayDecks != null)
                             _mainWindow.updateDeckList(displayDecks);
@@ -186,7 +231,7 @@ namespace HDT.Plugins.MetaDetector
                 }
         }
 
-        public bool checkNewVersion()
+        internal bool checkNewVersion()
         {
             try
             {
@@ -195,9 +240,9 @@ namespace HDT.Plugins.MetaDetector
 
                 if ((DateTime.Now - lastCheck).TotalDays > 3)
                 {
-                    MetaLog.Info("Checking for new version of Meta File");
+                    MetaLog.Info("Checking for new version of Meta File", "checkNewVersion");
                     WebClient client = new WebClient();
-                    String versionNumber = client.DownloadString("http://ec2-54-88-223-252.compute-1.amazonaws.com/metaversion.php");
+                    String versionNumber = client.DownloadString("http://metastats.net/metadetector/metaversion.php");
 
                     if (versionNumber.Trim() != "")
                     {
@@ -222,7 +267,7 @@ namespace HDT.Plugins.MetaDetector
             }
         }
 
-        private void LoadMetaDecks()
+        internal void LoadMetaDecks()
         {
             try
             {
@@ -253,27 +298,36 @@ namespace HDT.Plugins.MetaDetector
             }
         }
 
-        public static void DecompressFile(FileInfo fileToDecompress)
-        {
-            using (FileStream originalFileStream = fileToDecompress.OpenRead())
-            {
-                string currentFileName = fileToDecompress.FullName;
-                string newFileName = currentFileName.Remove(currentFileName.Length - fileToDecompress.Extension.Length);
-
-                using (FileStream decompressedFileStream = File.Create(newFileName))
-                {
-                    using (GZipStream decompressionStream = new GZipStream(originalFileStream, CompressionMode.Decompress))
-                    {
-                        decompressionStream.CopyTo(decompressedFileStream);
-                    }
-                }
-            }
-        }
-
-        private void DownloadMetaFile()
+        internal static void DecompressFile(FileInfo fileToDecompress)
         {
             try
             {
+                using (FileStream originalFileStream = fileToDecompress.OpenRead())
+                {
+                    string currentFileName = fileToDecompress.FullName;
+                    string newFileName = currentFileName.Remove(currentFileName.Length - fileToDecompress.Extension.Length);
+
+                    using (FileStream decompressedFileStream = File.Create(newFileName))
+                    {
+                        using (GZipStream decompressionStream = new GZipStream(originalFileStream, CompressionMode.Decompress))
+                        {
+                            decompressionStream.CopyTo(decompressedFileStream);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Info("Unable to decompress Meta file", "DecompressFile");
+                MetaLog.Error(ex);
+            }
+        }
+
+        internal void DownloadMetaFile()
+        {
+            try
+            {
+                MetaLog.Info("Downloing Meta File");
                 using (WebClient wc = new WebClient())
                 {
                     wc.DownloadProgressChanged += wc_DownloadProgressChanged;
@@ -284,6 +338,7 @@ namespace HDT.Plugins.MetaDetector
             catch (Exception ex)
             {
                 _mainWindow.updateText("Unable to download Meta File.", Brushes.PaleVioletRed);
+                MetaLog.Info("Error while downloing Meta File");
                 MetaLog.Error(ex);
             }
         }
@@ -298,7 +353,7 @@ namespace HDT.Plugins.MetaDetector
         {
             try
             {
-
+                MetaLog.Info("Meta File Download Complete");
                 _mainWindow.updateText("Meta File Downloaded", Brushes.LightGreen);
                 FileInfo fi = new FileInfo(_deckFilename + ".gz");
                 DecompressFile(fi);
@@ -314,7 +369,7 @@ namespace HDT.Plugins.MetaDetector
             }
         }
 
-        private void LoadMetaDeckfromZip()
+        internal void LoadMetaDeckfromZip()
         {
             try
             {
@@ -338,7 +393,7 @@ namespace HDT.Plugins.MetaDetector
             }
         }
 
-        public List<Deck> matchMetaDeck()
+        internal List<Deck> matchMetaDeck()
         {
             if (_validGameMode)
             {
@@ -356,6 +411,11 @@ namespace HDT.Plugins.MetaDetector
                     if (validDecks.Count == 0)
                     {
                         _mainWindow.updateText("No Match Found. Showing Closest Decks", Brushes.YellowGreen);
+                        //MetaLog.Info("No Match Found. Showing Closest Decks");
+                        _closestMatchedDecks = true;
+
+                        if (_matchedDecks.Count <= 10)
+                            return _matchedDecks;
 
                         validDecks = _metaDecks.Where(x => x.Class == Core.Game.Opponent.Class).ToList();
 
@@ -363,7 +423,7 @@ namespace HDT.Plugins.MetaDetector
 
                         validDecks.Clear();
                         int lastCount = 0;
-                        foreach (Deck d in _matchedDecks.OrderBy(x => Convert.ToInt16(x.Note)))
+                        foreach (Deck d in _matchedDecks.Where(x => x.Note != "0").OrderBy(x => Convert.ToInt16(x.Note)))
                         {
                             int count = d.Cards.Intersect(Core.Game.Opponent.PlayerCardList.Where(x => !x.IsCreated)).ToList().Count();
                             if (count > 0)
@@ -412,16 +472,101 @@ namespace HDT.Plugins.MetaDetector
         {
             if (_validGameMode)
                 if (Core.Game.CurrentFormat == Format.Standard && Core.Game.CurrentGameMode == GameMode.Ranked)
+                {
+                    MetaLog.Info("Saving Meta Ranks to file", "SaveMetaDeckStats");
                     XmlManager<List<Deck>>.Save(_deckFilename, _metaDecks);
+                }
         }
 
-        public string SendDeckStats()
+        internal async Task<string> sendCardStats()
+        {
+            try
+            {
+                if (_validGameMode)
+                {
+                    {
+                        MetaLog.Info("Uploading Card Stats...", "sendRequest");
+
+                        string url = "http://metastats.net/metadetector/cards.php";
+
+
+                        string postData = _cardsPlayed.GetCardStats();
+
+                        if (postData != "")
+                        {
+
+                            WebClient client = new WebClient();
+                            byte[] data = Encoding.UTF8.GetBytes(postData);
+                            Uri uri = new Uri(url);
+                            var response = Encoding.UTF8.GetString(await client.UploadDataTaskAsync(uri, "POST", data));
+
+                            _appConfig.lastUpload = DateTime.Now;
+                            _appConfig.Save();
+
+                            MetaLog.Info("Uploading Card Stats Done", "sendRequest");
+                            return response;
+                        }
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
+                return null;
+            }
+        }
+
+        internal async Task<string> sendMetaRanks()
+        {
+            try
+            {
+                if (_validGameMode)
+                {
+                    if ((DateTime.Now - _appConfig.lastUpload).TotalDays > 1)
+                    {
+                        MetaLog.Info("Uploading Meta Ranks...", "sendRequest");
+
+                        string url = "http://metastats.net/metadetector/meta.php";
+
+                        StringBuilder builder = new StringBuilder();
+                        foreach (Deck d in _metaDecks.Where(x => x.Note != "0"))
+                        {
+                            builder.Append(d.DeckId.ToString()).Append(":").Append(d.Note).Append(',');
+                        }
+
+                        string postData = builder.ToString().TrimEnd(',');
+
+                        WebClient client = new WebClient();
+                        byte[] data = Encoding.UTF8.GetBytes(postData);
+                        Uri uri = new Uri(url);
+                        var response = Encoding.UTF8.GetString(await client.UploadDataTaskAsync(uri, "POST", data));
+
+                        _appConfig.lastUpload = DateTime.Now;
+                        _appConfig.Save();
+
+                        MetaLog.Info("Uploading Meta Ranks Done", "sendRequest");
+                        return response;
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
+                return null;
+            }
+        }
+
+        internal string SendDeckStats()
         {
             if (_validGameMode)
             {
                 if ((DateTime.Now - _appConfig.lastUpload).TotalDays > 1)
                 {
-                    string url = "http://ec2-54-88-223-252.compute-1.amazonaws.com/meta.php";
+                    string url = "http://metastats.net/meta.php";
 
                     List<KeyValuePair<string, string>> deckStats = new List<KeyValuePair<string, string>>();
                     StringBuilder builder = new StringBuilder();
@@ -486,9 +631,62 @@ namespace HDT.Plugins.MetaDetector
         private static string statsDirectory = Path.Combine(Config.AppDataPath, "MetaDetector");
         private static string statsPath = Path.Combine(statsDirectory, "cardStats.xml");
 
+        public string gameId { get; set; }
         public string playerClass { get; set; }
+        public string opponentClass { get; set; }
+        public string gameFormat { get; set; }
+        public string gameMode { get; set; }
+        public string rankString { get; set; }
+        public string region { get; set; }
+        public int opponentRank { get; set; }
+        public int opponentLegendRank { get; set; }
+        public bool opponentCoin { get; set; }
+        public int playerRank { get; set; }
+        public int playerLegendRank { get; set; }
         public int turn { get; set; }
         public string cardId { get; set; }
+
+        private List<trackCards> _cardsPlayed = new List<trackCards>();
+
+        public void Add(string cardId, int turn)
+        {
+            trackCards temp = new trackCards();
+
+            var standard = Core.Game.CurrentFormat == Format.Standard;
+
+            temp.gameId = null;
+            temp.playerClass = Core.Game.CurrentGameStats.PlayerHero;
+            temp.opponentClass = Core.Game.CurrentGameStats.OpponentHero;
+            temp.gameFormat = Core.Game.CurrentFormat.ToString();
+            temp.gameMode = Core.Game.CurrentGameMode.ToString();
+            temp.opponentRank = standard ? Core.Game.MatchInfo.OpposingPlayer.StandardRank : Core.Game.MatchInfo.OpposingPlayer.WildRank;
+            temp.opponentLegendRank = standard ? Core.Game.MatchInfo.OpposingPlayer.StandardLegendRank : Core.Game.MatchInfo.OpposingPlayer.WildLegendRank;
+            temp.playerLegendRank = standard ? Core.Game.MatchInfo.LocalPlayer.StandardLegendRank : Core.Game.MatchInfo.LocalPlayer.WildLegendRank;
+            temp.playerRank = standard ? Core.Game.MatchInfo.LocalPlayer.StandardRank : Core.Game.MatchInfo.LocalPlayer.WildRank;
+            temp.region = Core.Game.CurrentGameStats.RegionString;
+            temp.opponentCoin = !Core.Game.CurrentGameStats.Coin;
+
+            temp.turn = turn;
+            temp.cardId = cardId;
+
+            _cardsPlayed.Add(temp);
+        }
+
+        public void Clear()
+        {
+            _cardsPlayed.Clear();
+        }
+
+        public string GetCardStats()
+        {
+            var serializer = new XmlSerializer(typeof(List<trackCards>));
+
+            using (StringWriter textWriter = new StringWriter())
+            {
+                serializer.Serialize(textWriter, _cardsPlayed);
+                return textWriter.ToString();
+            }
+        }
 
         public void Save()
         {
@@ -497,9 +695,9 @@ namespace HDT.Plugins.MetaDetector
                 if (!Directory.Exists(statsDirectory))
                     Directory.CreateDirectory(statsDirectory);
 
-                var serializer = new XmlSerializer(typeof(MyConfig));
+                var serializer = new XmlSerializer(typeof(List<trackCards>));
                 using (var writer = new StreamWriter(statsPath))
-                    serializer.Serialize(writer, this);
+                    serializer.Serialize(writer, _cardsPlayed);
             }
             catch (Exception ex)
             {

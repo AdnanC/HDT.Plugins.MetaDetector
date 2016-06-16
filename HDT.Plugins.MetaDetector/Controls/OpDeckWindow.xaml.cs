@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows.Media;
 using System.Linq;
 using HDT.Plugins.MetaDetector.Logging;
+using Hearthstone_Deck_Tracker;
 using Hearthstone_Deck_Tracker.Hearthstone;
 using System.Windows.Navigation;
 
@@ -35,15 +36,15 @@ namespace HDT.Plugins.MetaDetector.Controls
                 deck.Name = "Meta Deck";
                 lbDecks.Items.Add(deck);
             }*/
-            tbInformation.Text = "Waiting For Card Play...";
+            tbInformation.Text = "Waiting For Cards...";
             tbInformation.Foreground = Brushes.White;
-            tbMetaRank.Text = "";            
+            tbMetaRank.Text = "";
         }
 
         public void updateCardList(Deck deck)
         {
             lvDeckList.ItemsSource = deck.Cards;
-            Hearthstone_Deck_Tracker.Helper.SortCardCollection(lvDeckList.Items, false);
+            Helper.SortCardCollection(lvDeckList.Items, false);
         }
 
         public void updateCardsCount(int count)
@@ -56,6 +57,12 @@ namespace HDT.Plugins.MetaDetector.Controls
             tbVersion.Text = "v" + pluginVersion.ToString();
         }
 
+        public void newVersionAvailable()
+        {
+            tbWebsite.Visibility = System.Windows.Visibility.Hidden;
+            tbVersion.Visibility = System.Windows.Visibility.Visible;
+        }
+
         public void updateDeckList(List<Deck> metaDecks)
         {
             try
@@ -64,16 +71,18 @@ namespace HDT.Plugins.MetaDetector.Controls
                 {
                     lbDecks.Items.Clear();
 
-                    foreach (Deck deck in metaDecks.OrderByDescending(x => Convert.ToInt32(x.Note)).ThenBy(x=>x.Class))
+                    foreach (Deck deck in metaDecks.OrderByDescending(x => Convert.ToInt32(x.Note)).ThenBy(x => x.Class))
                     {
                         lbDecks.Items.Add(deck);
                     }
 
-                    if(lbDecks.Items.Count > 0)
+                    if (lbDecks.Items.Count > 0)
+                    {
                         lbDecks.SelectedIndex = 0;
+                    }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MetaLog.Error(ex);
             }
@@ -108,7 +117,8 @@ namespace HDT.Plugins.MetaDetector.Controls
                 lvDeckList.ItemsSource = ((Deck)lbDecks.SelectedItem).Cards;
                 Hearthstone_Deck_Tracker.Helper.SortCardCollection(lvDeckList.Items, false);
 
-                tbMetaRank.Text = "Meta Rank: " + ((Deck)lbDecks.SelectedItem).Note;
+                double rank = Convert.ToDouble(((Deck)lbDecks.SelectedItem).Note) / 100;
+                tbMetaRank.Text = "Meta Rank: " + rank.ToString();
             }
         }
 
@@ -136,7 +146,7 @@ namespace HDT.Plugins.MetaDetector.Controls
             {
                 System.Diagnostics.Process.Start(e.Uri.ToString());
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MetaLog.Error(ex);
             }
