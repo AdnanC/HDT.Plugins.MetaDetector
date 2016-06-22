@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/adnanc/HDT.Plugins.MetaDetector](https://badges.gitter.im/adnanc/HDT.Plugins.MetaDetector.svg)](https://gitter.im/adnanc/HDT.Plugins.MetaDetector?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Plugin tries to detect what deck opponent is playing.
+Hearthstone Deck Tracker Plugin to detect oppnent's deck.
 
 
 # Installation
