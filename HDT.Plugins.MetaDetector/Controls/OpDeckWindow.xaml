@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:HDT.Plugins.MetaDetector.Controls"
-             mc:Ignorable="d" WindowStartupLocation="CenterOwner" WindowStyle="ToolWindow" Width="356.872" Height="757.056" Title="Meta Detector" Closing="DeckWindow_Closing">
+             mc:Ignorable="d" WindowStartupLocation="CenterOwner" WindowStyle="ToolWindow" Width="356.872" Height="757.056" Title="Meta Detector" Closing="DeckWindow_Closing" >
     <Grid>
         <TextBlock x:Name="tbInformation" Margin="4,10,108,0" TextWrapping="NoWrap" Foreground="White" VerticalAlignment="Top" Height="16"/>
         <TextBlock x:Name="tbMetaRank" Margin="5,0,164,40" TextWrapping="Wrap" Foreground="#FFFDFDFD" Height="16" VerticalAlignment="Bottom"/>

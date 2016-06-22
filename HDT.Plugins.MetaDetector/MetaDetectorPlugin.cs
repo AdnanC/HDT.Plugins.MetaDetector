@@ -58,9 +58,12 @@ namespace HDT.Plugins.MetaDetector
 
                 _MainWindow.updateVersion(Version);
 
+                GameEvents.OnGameStart.Add(_MetaDetector.GameStart);
                 GameEvents.OnTurnStart.Add(_MetaDetector.TurnStart);
                 GameEvents.OnOpponentPlay.Add(_MetaDetector.OpponentPlay);
-                GameEvents.OnGameStart.Add(_MetaDetector.GameStart);
+                GameEvents.OnOpponentDraw.Add(_MetaDetector.OpponentDraw);
+                GameEvents.OnOpponentHeroPower.Add(_MetaDetector.OpponentHeroPower);
+                GameEvents.OnOpponentPlayToGraveyard.Add(_MetaDetector.OpponentPlayToGraveyard);
                 GameEvents.OnGameEnd.Add(_MetaDetector.GameEnd);
 
                 CheckForUpdate();
@@ -86,7 +89,7 @@ namespace HDT.Plugins.MetaDetector
 
         public Version Version
         {
-            get { return new Version(0, 0, 5); }
+            get { return new Version(0, 0, 6); }
         }
 
         private async void CheckForUpdate()

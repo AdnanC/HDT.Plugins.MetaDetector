@@ -9,11 +9,13 @@ using System.Xml.Serialization;
 using System.Threading.Tasks;
 using System.ComponentModel;
 using Hearthstone_Deck_Tracker;
+using HearthDb.Enums;
 using Hearthstone_Deck_Tracker.Enums;
 using HDT.Plugins.MetaDetector.Logging;
 using Hearthstone_Deck_Tracker.Hearthstone;
 using HDT.Plugins.MetaDetector.Controls;
 using System.Text;
+using Hearthstone_Deck_Tracker.Hearthstone.Entities;
 
 namespace HDT.Plugins.MetaDetector
 {
@@ -39,6 +41,7 @@ namespace HDT.Plugins.MetaDetector
         private int _metaRank = 0;
         internal bool _statsUpdated = false;
         private bool _closestMatchedDecks = false;
+        Dictionary<int, CardInfo> _trackCards = new Dictionary<int, CardInfo>();
 
         public MetaDetector(OpDeckWindow mainWindow)
         {
@@ -74,6 +77,7 @@ namespace HDT.Plugins.MetaDetector
             MetaLog.Info("Game Mode: " + Core.Game.CurrentGameMode, "GameStart");
             LoadMetaDecks();
             _cardsPlayed.Clear();
+            _trackCards.Clear();
             checkGameMode();
 
             if (_validGameMode)
@@ -98,6 +102,9 @@ namespace HDT.Plugins.MetaDetector
 
         internal void TurnStart(ActivePlayer activePlayer)
         {
+            if (ActivePlayer.Player == activePlayer)
+                updateCardsInHand();
+
             try
             {
                 checkGameMode();
@@ -120,25 +127,96 @@ namespace HDT.Plugins.MetaDetector
             }
         }
 
-        public void OpponentPlay(Card cardPlayed)
+        public void OpponentDraw()
         {
-            if (_validGameMode)
+            try
             {
-                MetaLog.Info("Opponent Played: " + cardPlayed.Name, "OpponentPlay");
-                _opponentCardsPlayed.Add(cardPlayed);
-
-                if (cardPlayed.Id != "GAME_005") //ignore the coin
+                foreach (Entity e in Core.Game.Opponent.PlayerEntities)
                 {
-                    _opponentCardCount++;
-                    updateDecks();
+                    if (e.CardId == null)
+                    {
+                        if (_trackCards.Where(x => x.Key == e.Id).Count() > 0)
+                        {
+                            _trackCards[e.Id].turnInHand = e.Info.Turn;
+                            _trackCards[e.Id].mulligan = e.Info.Mulliganed;
+                            _trackCards[e.Id].created = e.Info.Created;
+                        }
+                        else
+                        {
+                            _trackCards.Add(e.Id, new CardInfo(e.Info.Turn, e.Info.Mulliganed, "", -1));
+                        }
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
+            }
+        }
 
-            _cardsPlayed.Add(cardPlayed.Id, _opponentTurnCount);
+        public void OpponentPlay(Card cardPlayed)
+        {
+            try
+            {
+                if (_validGameMode)
+                {
+                    MetaLog.Info("Turn " + _opponentTurnCount + ": Opponent Played - " + cardPlayed.Name, "OpponentPlay");
+                    _opponentCardsPlayed.Add(cardPlayed);
+
+                    if (cardPlayed.Id != "GAME_005") //ignore the coin
+                    {
+                        _opponentCardCount++;
+                        updateDecks();
+                    }
+                }
+
+                updateCardsInHand();
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
+            }
+        }
+
+        private void updateCardsInHand()
+        {
+            try
+            {
+                
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
+            }
+
+        }
+
+        public void OpponentHeroPower()
+        {
+            _cardsPlayed.Add("HERO_POWER", _opponentTurnCount, false, -1, false, -1);
+        }
+
+        public void OpponentPlayToGraveyard(Card c)
+        {
+            MetaLog.Info("Turn "+ _opponentTurnCount + ": Minion Dead - " + c.Name, "OpponentPlayToGraveyard");
         }
 
         public async void GameEnd()
         {
+            string matchedDeck = "";
+
+            try
+            {
+                if (_metaDecks != null)
+                {
+                    if (_metaDecks.Count < 10)
+                        matchedDeck = _metaDecks.First().DeckId.ToString();
+                }
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
+            }
 
             if (_validGameMode)
                 try
@@ -150,23 +228,24 @@ namespace HDT.Plugins.MetaDetector
                         _metaRank = _opponentCardCount;
                     }
 
-                    if (_matchedDecks.Count <= 10)
+                    if (_matchedDecks.Count <= 10 & !_closestMatchedDecks)
                     {
                         _bestMetaRank = _opponentTurnCount;
                     }
 
-                    if (_metaRank > 0 || _bestMetaRank > 0)
-                    {
-                        MetaLog.Info("Updating ranks (" + _metaRank + "+" + _bestMetaRank + ") for " + _matchedDecks.Count + " deck(s).", "GameEnd");
-
-                        foreach (Deck d in _matchedDecks)
+                    if (Core.Game.CurrentFormat == Format.Standard)
+                        if (_metaRank > 0 || _bestMetaRank > 0)
                         {
-                            _metaDecks.Find(x => x.DeckId == d.DeckId).Note = (Convert.ToInt32(_metaDecks.Find(x => x.DeckId == d.DeckId).Note) + _metaRank + _bestMetaRank).ToString();
-                        }
+                            MetaLog.Info("Updating ranks (" + _metaRank + "+" + _bestMetaRank + ") for " + _matchedDecks.Count + " deck(s).", "GameEnd");
 
-                        SaveMetaDeckStats();
-                        await sendMetaRanks();
-                    }
+                            foreach (Deck d in _matchedDecks)
+                            {
+                                _metaDecks.Find(x => x.DeckId == d.DeckId).Note = (Convert.ToInt32(_metaDecks.Find(x => x.DeckId == d.DeckId).Note) + _metaRank + _bestMetaRank).ToString();
+                            }
+
+                            SaveMetaDeckStats();
+                            await sendMetaRanks();
+                        }
 
                     _matchedDecks = new List<Deck>(_metaDecks);
 
@@ -178,8 +257,49 @@ namespace HDT.Plugins.MetaDetector
                     MetaLog.Error(ex);
                 }
 
-            _cardsPlayed.Save();
-            await sendCardStats();
+            //get all cards played / died in the game
+            try 
+            {
+                foreach (Entity e in Core.Game.Opponent.PlayerEntities.Where(x => x.CardId != null))
+                {
+                    CardInfo temp;
+                    if (_trackCards.TryGetValue(e.Id, out temp))
+                    {
+                        if (_trackCards[e.Id].cardId == "")
+                        {
+                            _trackCards[e.Id].cardId = e.CardId;
+                            _trackCards[e.Id].turnCardPlayed = e.Info.Turn;
+                        }
+                    }
+                }
+
+                foreach (var x in Core.Game.Opponent.Graveyard)
+                {
+                    CardInfo temp;
+                    if (_trackCards.TryGetValue(x.Id, out temp))
+                    {
+                        _trackCards[x.Id].turnCardDied = x.Info.Turn;
+                    }
+                }
+
+                //_cardsPlayed.Clear();
+                foreach (CardInfo x in _trackCards.Values.Where(x => x.cardId != "").OrderBy(x => x.turnCardPlayed).ToList())
+                {
+                    _cardsPlayed.Add(x.cardId, x.turnCardPlayed, x.created, x.turnInHand, x.mulligan, x.turnCardDied);
+                }
+
+                if (Core.Game.CurrentGameStats.Result == GameResult.Win)
+                    _cardsPlayed.setPlayerWin(matchedDeck);
+                else if (Core.Game.CurrentGameStats.Result == GameResult.Loss)
+                    _cardsPlayed.setOpponentWin(matchedDeck);
+
+                _cardsPlayed.Save();
+                await sendCardStats();
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
+            }
         }
 
         internal void updateDecks()
@@ -414,8 +534,8 @@ namespace HDT.Plugins.MetaDetector
                         //MetaLog.Info("No Match Found. Showing Closest Decks");
                         _closestMatchedDecks = true;
 
-                        if (_matchedDecks.Count <= 10)
-                            return _matchedDecks;
+                        //if (_matchedDecks.Count <= 10)
+                        //    return _matchedDecks;
 
                         validDecks = _metaDecks.Where(x => x.Class == Core.Game.Opponent.Class).ToList();
 
@@ -423,7 +543,7 @@ namespace HDT.Plugins.MetaDetector
 
                         validDecks.Clear();
                         int lastCount = 0;
-                        foreach (Deck d in _matchedDecks.Where(x => x.Note != "0").OrderBy(x => Convert.ToInt16(x.Note)))
+                        foreach (Deck d in _matchedDecks.OrderBy(x => Convert.ToInt16(x.Note)))
                         {
                             int count = d.Cards.Intersect(Core.Game.Opponent.PlayerCardList.Where(x => !x.IsCreated)).ToList().Count();
                             if (count > 0)
@@ -626,6 +746,24 @@ namespace HDT.Plugins.MetaDetector
         }
     }
 
+    public class CardInfo
+    {
+        public string cardId;
+        public int turnCardPlayed;
+        public int turnInHand;
+        public int turnCardDied;
+        public bool mulligan;
+        public bool created;
+
+        public CardInfo(int turnInHand, bool mul = false, string cardId = "", int turnplayed = -1)
+        {
+            this.mulligan = mul;
+            this.turnInHand = turnInHand;
+            this.cardId = cardId;
+            this.turnCardPlayed = turnplayed;
+        }
+    }
+
     public class trackCards
     {
         private static string statsDirectory = Path.Combine(Config.AppDataPath, "MetaDetector");
@@ -638,6 +776,7 @@ namespace HDT.Plugins.MetaDetector
         public string gameMode { get; set; }
         public string rankString { get; set; }
         public string region { get; set; }
+        public int rankedSeasonId { get; set; }
         public int opponentRank { get; set; }
         public int opponentLegendRank { get; set; }
         public bool opponentCoin { get; set; }
@@ -645,14 +784,28 @@ namespace HDT.Plugins.MetaDetector
         public int playerLegendRank { get; set; }
         public int turn { get; set; }
         public string cardId { get; set; }
+        public bool opponentWin { get; set; }
+        public bool playerWin { get; set; }
+        public bool isCreated { get; set; }
+        public int mana { get; set; }
+        public int manaOverload { get; set; }
+        public string deckId { get; set; }
+        public int turnDrawn { get; set; }
+        public int turnToGraveyard { get; set; }
+        public bool mulligan { get; set; }
 
         private List<trackCards> _cardsPlayed = new List<trackCards>();
 
-        public void Add(string cardId, int turn)
+        public void Add(string cardId, int turn, bool isCreated, int nturnInHand, bool bmulligan, int turnCardDied)
         {
             trackCards temp = new trackCards();
 
             var standard = Core.Game.CurrentFormat == Format.Standard;
+
+            List<Entity> Entities =
+            Helper.DeepClone<Dictionary<int, Entity>>(Core.Game.Entities).Values.ToList<Entity>();
+            Entity Opponent = Entities?.FirstOrDefault(x => x.IsOpponent);
+            Entity currentCard = Entities?.FirstOrDefault(x => x.CardId == cardId);
 
             temp.gameId = null;
             temp.playerClass = Core.Game.CurrentGameStats.PlayerHero;
@@ -664,7 +817,21 @@ namespace HDT.Plugins.MetaDetector
             temp.playerLegendRank = standard ? Core.Game.MatchInfo.LocalPlayer.StandardLegendRank : Core.Game.MatchInfo.LocalPlayer.WildLegendRank;
             temp.playerRank = standard ? Core.Game.MatchInfo.LocalPlayer.StandardRank : Core.Game.MatchInfo.LocalPlayer.WildRank;
             temp.region = Core.Game.CurrentGameStats.RegionString;
-            temp.opponentCoin = !Core.Game.CurrentGameStats.Coin;
+            temp.opponentCoin = Core.Game.Opponent.HasCoin;
+            temp.rankedSeasonId = Core.Game.MatchInfo.RankedSeasonId;
+            temp.opponentWin = false;
+            temp.playerWin = false;
+            temp.isCreated = isCreated;
+            temp.turnDrawn = nturnInHand;
+            temp.mulligan = bmulligan;
+            temp.turnToGraveyard = turnCardDied;
+
+            if (Opponent != null)
+            {
+                temp.mana = Opponent.GetTag(GameTag.RESOURCES);
+                temp.manaOverload = Opponent.GetTag(GameTag.OVERLOAD_OWED);
+                int i = Opponent.GetTag(GameTag.ZONE_POSITION);
+            }
 
             temp.turn = turn;
             temp.cardId = cardId;
@@ -702,6 +869,34 @@ namespace HDT.Plugins.MetaDetector
             catch (Exception ex)
             {
                 MetaLog.Error(ex);
+            }
+        }
+
+        public void setPlayerWin(string deckId)
+        {
+            foreach (trackCards c in _cardsPlayed)
+            {
+                c.playerWin = true;
+                c.deckId = deckId;
+            }
+        }
+
+        public void setOpponentWin(string deckId)
+        {
+            foreach (trackCards c in _cardsPlayed)
+            {
+                c.opponentWin = true;
+                c.deckId = deckId;
+            }
+        }
+
+        public void setTurnInHand(Dictionary<int, CardInfo> cardsTracked)
+        {
+            foreach (var c in cardsTracked.Where(x => x.Value.cardId != null))
+            {
+                var t = (trackCards)_cardsPlayed.Where(x => x.turn == c.Value.turnCardPlayed && x.cardId == c.Value.cardId);
+                t.mulligan = c.Value.mulligan;
+                t.turnDrawn = c.Value.turnInHand;
             }
         }
     }
