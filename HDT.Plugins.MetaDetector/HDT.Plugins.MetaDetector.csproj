@@ -107,6 +107,9 @@
     <Compile Include="Controls\PluginMenu.xaml.cs">
       <DependentUpon>PluginMenu.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\VersionWindow.xaml.cs">
+      <DependentUpon>VersionWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="GitHub.cs" />
     <Compile Include="MetaLog.cs" />
     <Compile Include="MetaDetector.cs" />
@@ -139,6 +142,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\PluginMenu.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\VersionWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -60,7 +60,7 @@ namespace HDT.Plugins.MetaDetector.Controls
         public void newVersionAvailable()
         {
             tbWebsite.Visibility = System.Windows.Visibility.Hidden;
-            tbVersion.Visibility = System.Windows.Visibility.Visible;
+            tbNewVersion.Visibility = System.Windows.Visibility.Visible;
         }
 
         public void updateDeckList(List<Deck> metaDecks)

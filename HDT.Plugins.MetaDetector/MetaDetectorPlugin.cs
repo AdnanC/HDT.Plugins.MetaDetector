@@ -49,7 +49,7 @@ namespace HDT.Plugins.MetaDetector
         {
             if (_MainWindow == null)
             {
-                
+
                 _MainWindow = new OpDeckWindow();
 
                 _MetaDetectorMenuItem = new PluginMenu(_MainWindow);
@@ -59,12 +59,18 @@ namespace HDT.Plugins.MetaDetector
                 _MainWindow.updateVersion(Version);
 
                 GameEvents.OnGameStart.Add(_MetaDetector.GameStart);
+                GameEvents.OnGameEnd.Add(_MetaDetector.GameEnd);
+
                 GameEvents.OnTurnStart.Add(_MetaDetector.TurnStart);
+
                 GameEvents.OnOpponentPlay.Add(_MetaDetector.OpponentPlay);
                 GameEvents.OnOpponentDraw.Add(_MetaDetector.OpponentDraw);
                 GameEvents.OnOpponentHeroPower.Add(_MetaDetector.OpponentHeroPower);
                 GameEvents.OnOpponentPlayToGraveyard.Add(_MetaDetector.OpponentPlayToGraveyard);
-                GameEvents.OnGameEnd.Add(_MetaDetector.GameEnd);
+
+                GameEvents.OnPlayerDraw.Add(_MetaDetector.PlayerDraw);
+                GameEvents.OnPlayerPlay.Add(_MetaDetector.PlayerPlay);
+                GameEvents.OnPlayerHeroPower.Add(_MetaDetector.PlayerHeroPower);
 
                 CheckForUpdate();
 
@@ -89,7 +95,7 @@ namespace HDT.Plugins.MetaDetector
 
         public Version Version
         {
-            get { return new Version(0, 0, 6); }
+            get { return new Version(0, 0, 7); }
         }
 
         private async void CheckForUpdate()
@@ -98,6 +104,8 @@ namespace HDT.Plugins.MetaDetector
             if (latest != null)
             {
                 _MainWindow.newVersionAvailable();
+                VersionWindow newVersion = new VersionWindow();
+                newVersion.Show();
             }
         }
     }
