@@ -38,8 +38,11 @@ namespace HDT.Plugins.MetaDetector
         private int _opponentCardCheck = 2;
         private int _opponentCardCount = 0;
         private int _opponentTurnCount = 0;
+        private int _playerTurnCount = 0;
         private int _bestMetaRank = 0;
         private int _metaRank = 0;
+        private Card _lastCardPlayed = null;
+        //private Card _lastOpponentCard = null;
         internal bool _statsUpdated = false;
         private bool _closestMatchedDecks = false;
         Dictionary<int, CardInfo> _trackOpponentCards = new Dictionary<int, CardInfo>();
@@ -94,6 +97,7 @@ namespace HDT.Plugins.MetaDetector
                 _opponentCardCheck = 2;
                 _opponentCardCount = 0;
                 _opponentTurnCount = 0;
+                _playerTurnCount = 0;
                 _bestMetaRank = 0;
                 _metaRank = 0;
                 _closestMatchedDecks = false;
@@ -107,12 +111,40 @@ namespace HDT.Plugins.MetaDetector
 
                 MetaLog.Info("New Game Started. Waiting for opponent to play cards.", "GameStart");
             }
+
+            
+            if (Core.Game.Player.HasCoin && _opponentTurnCount == 0)
+                _opponentTurnCount++;
+        }
+
+        internal void PlayerMulligan(Card c)
+        {
+            _trackPlayerCards.FirstOrDefault(x => x.Value.cardId == c.Id).Value.mulligan = true;
+
+            MetaLog.Info("Player Mulliganed " + c.Name, "PlayerMulligan");
+        }
+
+        internal void OpponentMulligan()
+        {
+            
         }
 
         internal void TurnStart(ActivePlayer activePlayer)
         {
             if (ActivePlayer.Player == activePlayer)
-                updateCardsInHand();
+            {
+                _playerTurnCount++;
+                updateOpponentCardsPlayed();
+            }
+            else
+            {
+                _opponentTurnCount++;
+            }
+
+            /*if (Core.Game.Player.HasCoin)
+                _opponentTurnCount++;
+            else
+                _playerTurnCount++;*/
 
             try
             {
@@ -123,10 +155,6 @@ namespace HDT.Plugins.MetaDetector
                     if (ActivePlayer.Player == activePlayer)
                     {
                         updateDecks();
-                    }
-                    else
-                    {
-                        _opponentTurnCount++;
                     }
                 }
             }
@@ -140,21 +168,7 @@ namespace HDT.Plugins.MetaDetector
         {
             try
             {
-                int turn = Core.Game.PlayerEntity.GetTag(GameTag.TURN);
-
-                _cardsPlayedPlayer.Add(c.Id, -1, c.IsCreated, turn, false, -1, c.Name, -1, -1);
-
-                foreach (Entity e in Core.Game.Player.PlayerEntities.Where(x => x.CardId != null))
-                {
-                    if (_trackPlayerCards.Where(x => x.Key == e.Id).Count() > 0)
-                    {
-
-                    }
-                    else
-                    {
-                        _trackPlayerCards.Add(e.Id, new CardInfo(e.Info.Turn, e.Info.Mulliganed, e.CardId, -1));
-                    }
-                }
+                updatePlayerHandCards();
             }
             catch (Exception ex)
             {
@@ -162,23 +176,69 @@ namespace HDT.Plugins.MetaDetector
             }
         }
 
+        private void updatePlayerHandCards()
+        {
+            foreach (var e in Core.Game.Entities.Where(x => x.Value.CardId != null && x.Value.CardId != "" &&
+                    !x.Value.IsHero && !x.Value.IsHeroPower && x.Value.IsInHand &&
+                    x.Value.GetTag(GameTag.CONTROLLER) == Core.Game.Player.Id).ToList())
+            {
+                if (_trackPlayerCards.Where(x => x.Key == e.Value.Id).Count() > 0)
+                {
+
+                }
+                else
+                {
+                    MetaLog.Info("Turn " + _playerTurnCount + ": Player Draws " + e.Value.LocalizedName);
+
+                    if (e.Value.GetTag(GameTag.CREATOR) > 0)
+                    {
+                        _trackPlayerCards.Add(e.Value.Id, new CardInfo(e.Value.Info.Turn, e.Value.Info.Mulliganed, e.Value.CardId, -1, -1, -1, -1,
+                            e.Value.Info.Created, Core.Game.Entities[e.Value.GetTag(GameTag.CREATOR)].CardId));
+                    }
+                    else
+                    {
+                        _trackPlayerCards.Add(e.Value.Id, new CardInfo(e.Value.Info.Turn, e.Value.Info.Mulliganed, e.Value.CardId, -1, -1, -1, -1,
+                            e.Value.Info.Created, ""));
+                    }
+                }
+            }
+        }
+
+        public void OpponentSecretTriggered(Card c)
+        {
+            updateOpponentCardsPlayed();
+        }
+
         public void OpponentDraw()
         {
             try
             {
-                foreach (Entity e in Core.Game.Opponent.PlayerEntities)
+                foreach (Entity e in Core.Game.Entities.Select(x => x.Value).Where(x => !x.IsHero
+                && !x.IsHeroPower && x.GetTag(GameTag.CONTROLLER) == Core.Game.Opponent.Id))
                 {
-                    if (e.CardId == null)
+                    if (e.CardId == null || e.CardId == "")
                     {
                         if (_trackOpponentCards.Where(x => x.Key == e.Id).Count() > 0)
                         {
                             _trackOpponentCards[e.Id].turnInHand = e.Info.Turn;
                             _trackOpponentCards[e.Id].mulligan = e.Info.Mulliganed;
                             _trackOpponentCards[e.Id].created = e.Info.Created;
+
+                            if (e.GetTag(GameTag.CREATOR) > 0)
+                                _trackOpponentCards[e.Id].createdBy = Core.Game.Entities[e.GetTag(GameTag.CREATOR)].CardId;
                         }
                         else
                         {
-                            _trackOpponentCards.Add(e.Id, new CardInfo(e.Info.Turn, e.Info.Mulliganed, "", -1));
+                            if (e.GetTag(GameTag.CREATOR) > 0)
+                            {
+                                _trackOpponentCards.Add(e.Id, new CardInfo(e.Info.Turn, e.Info.Mulliganed, "", -1, -1, -1, -1,
+                                e.Info.Created, Core.Game.Entities[e.GetTag(GameTag.CREATOR)].CardId));
+                            }
+                            else
+                            {
+                                _trackOpponentCards.Add(e.Id, new CardInfo(e.Info.Turn, e.Info.Mulliganed, "", -1, -1, -1, -1,
+                                e.Info.Created, ""));
+                            }
                         }
                     }
                 }
@@ -193,17 +253,12 @@ namespace HDT.Plugins.MetaDetector
         {
             try
             {
-                foreach (Entity e in Core.Game.Player.Board)
-                {
-                    CardInfo temp;
-                    if (_trackPlayerCards.TryGetValue(e.Id, out temp))
-                    {
-                        _trackPlayerCards[e.Id].turnCardPlayed = e.Info.Turn;
-                        _trackPlayerCards[e.Id].created = e.Info.Created;
-                    }
-                }
+                _lastCardPlayed = cardPlayed;
 
-                MetaLog.Info("Turn " + _opponentTurnCount + ": Player Played - " + cardPlayed.Name, "PlayerPlay");
+                updatePlayerHandCards();
+                updatePlayerBoardEntities();
+
+                MetaLog.Info("Turn " + _playerTurnCount + ": Player Played - " + cardPlayed.Name, "PlayerPlay");
             }
             catch (Exception ex)
             {
@@ -211,14 +266,91 @@ namespace HDT.Plugins.MetaDetector
             }
         }
 
+        private void updatePlayerBoardEntities()
+        {
+            foreach (Entity e in Core.Game.Player.Board.Where(x => !x.IsHero && !x.IsHeroPower))
+            {
+                CardInfo temp;
+                if (_trackPlayerCards.TryGetValue(e.Id, out temp))
+                {
+                    _trackPlayerCards[e.Id].turnCardPlayed = e.Info.Turn;
+
+                    if (e.GetTag(GameTag.CREATOR) > 0)
+                    {
+                        _trackPlayerCards[e.Id].created = e.Info.Created;
+                        _trackPlayerCards[e.Id].createdBy = Core.Game.Entities[e.GetTag(GameTag.CREATOR)].CardId;
+                    }
+                }
+                else
+                {
+                    if (e.GetTag(GameTag.CREATOR) > 0)
+                    {
+                        _trackPlayerCards.Add(e.Id, new CardInfo(-1, false, e.CardId, e.Info.Turn, -1, -1, -1,
+                            e.Info.Created, Core.Game.Entities[e.GetTag(GameTag.CREATOR)].CardId));
+                    }
+                    else
+                    {
+                        _trackPlayerCards.Add(e.Id, new CardInfo(-1, false, e.CardId, e.Info.Turn, -1, -1, -1,
+                            e.Info.Created, ""));
+                    }
+                }
+            }
+        }
+
+        public void OpponentCreateInPlay(Card cardCreated)
+        {
+            updateOpponentCardsPlayed();
+            /*if (cardCreated.Type == "Minion")
+            {
+                int turn = Core.Game.OpponentEntity.GetTag(GameTag.TURN);
+                _cardsPlayedOpponent.Add(cardCreated.Id, turn, true, -1, false, -1, cardCreated.Name, Core.Game.OpponentEntity.GetTag(GameTag.RESOURCES), Core.Game.OpponentEntity.GetTag(GameTag.OVERLOAD_OWED), "Opponent", _lastCardPlayed.Id);
+                MetaLog.Info(cardCreated.Name + " was created by " + _lastCardPlayed.Name, "OpponentCreateInPlay");
+            }*/
+        }
+
+        public void OpponentCreateInDeck(Card cardCreated)
+        {
+            /*
+            int turn = Core.Game.OpponentEntity.GetTag(GameTag.TURN);
+            _cardsPlayedOpponent.Add(cardCreated.Id, turn, true, -1, false, -1, cardCreated.Name, Core.Game.OpponentEntity.GetTag(GameTag.RESOURCES), Core.Game.OpponentEntity.GetTag(GameTag.OVERLOAD_OWED), "Opponent", _lastCardPlayed.Id);
+            MetaLog.Info(cardCreated.Name + " was created by " + _lastCardPlayed.Name, "OpponentCreateInDeck");
+        */
+        }
+
+        public void PlayerCreateInPlay(Card cardCreated)
+        {
+            updatePlayerBoardEntities();
+            /*if (cardCreated.Type == "Minion")
+            {
+                int turn = Core.Game.PlayerEntity.GetTag(GameTag.TURN);
+                _cardsPlayedOpponent.Add(cardCreated.Id, turn, true, -1, false, -1, cardCreated.Name, Core.Game.PlayerEntity.GetTag(GameTag.RESOURCES), Core.Game.PlayerEntity.GetTag(GameTag.OVERLOAD_OWED), "Player", _lastCardPlayed.Id);
+
+                MetaLog.Info(cardCreated.Name + " was created by " + _lastCardPlayed.Name, "PlayerCreateInPlay");
+            }*/
+
+
+        }
+
+        public void PlayerCreateInDeck(Card cardCreated)
+        {
+            /*
+            int turn = Core.Game.PlayerEntity.GetTag(GameTag.TURN);
+            _cardsPlayedOpponent.Add(cardCreated.Id, turn, true, -1, false, -1, cardCreated.Name, Core.Game.PlayerEntity.GetTag(GameTag.RESOURCES), Core.Game.PlayerEntity.GetTag(GameTag.OVERLOAD_OWED), "Player", _lastCardPlayed.Id);
+
+            MetaLog.Info(cardCreated.Name + " was created by " + _lastCardPlayed.Name, "PlayerCreateInDeck");
+        */
+
+        }
+
         public void OpponentPlay(Card cardPlayed)
         {
             try
             {
+                _lastCardPlayed = cardPlayed;
+
                 if (_validGameMode)
                 {
-                    MetaLog.Info("Turn " + _opponentTurnCount + ": Opponent Played - " + cardPlayed.Name, "OpponentPlay");
-                    _opponentCardsPlayed.Add(cardPlayed);
+                    //_opponentCardsPlayed.Add(cardPlayed);
 
                     if (cardPlayed.Id != "GAME_005") //ignore the coin
                     {
@@ -227,7 +359,8 @@ namespace HDT.Plugins.MetaDetector
                     }
                 }
 
-                updateCardsInHand();
+                updateOpponentCardsPlayed();
+                MetaLog.Info("Turn " + _opponentTurnCount + ": Opponent Played - " + cardPlayed.Name, "OpponentPlay");
             }
             catch (Exception ex)
             {
@@ -235,11 +368,13 @@ namespace HDT.Plugins.MetaDetector
             }
         }
 
-        private void updateCardsInHand()
+        private void updateOpponentCardsPlayed()
         {
             try
             {
-                foreach (Entity e in Core.Game.Opponent.PlayerEntities.Where(x => x.CardId != null))
+                foreach (Entity e in Core.Game.Entities.Where(x => x.Value.CardId != null && !x.Value.IsHeroPower
+                && !x.Value.IsHero && x.Value.GetTag(GameTag.CONTROLLER) == Core.Game.Opponent.Id
+                && x.Value.IsInPlay).Select(x => x.Value))
                 {
                     CardInfo temp;
                     if (_trackOpponentCards.TryGetValue(e.Id, out temp))
@@ -250,6 +385,27 @@ namespace HDT.Plugins.MetaDetector
                             _trackOpponentCards[e.Id].turnCardPlayed = e.Info.Turn;
                             _trackOpponentCards[e.Id].mana = Core.Game.OpponentEntity.GetTag(GameTag.RESOURCES);
                             _trackOpponentCards[e.Id].manaoverload = Core.Game.OpponentEntity.GetTag(GameTag.OVERLOAD_OWED);
+
+                            if (e.GetTag(GameTag.CREATOR) > 0)
+                            {
+                                _trackOpponentCards[e.Id].created = e.Info.Created;
+                                _trackOpponentCards[e.Id].createdBy = Core.Game.Entities[e.GetTag(GameTag.CREATOR)].CardId;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (e.GetTag(GameTag.CREATOR) > 0)
+                        {
+                            _trackOpponentCards.Add(e.Id, new CardInfo(-1, false, e.CardId, e.Info.Turn,
+                            Core.Game.OpponentEntity.GetTag(GameTag.RESOURCES), Core.Game.OpponentEntity.GetTag(GameTag.OVERLOAD_OWED), -1,
+                            e.Info.Created, Core.Game.Entities[e.GetTag(GameTag.CREATOR)].CardId));
+                        }
+                        else
+                        {
+                            _trackOpponentCards.Add(e.Id, new CardInfo(-1, false, e.CardId, e.Info.Turn,
+                            Core.Game.OpponentEntity.GetTag(GameTag.RESOURCES), Core.Game.OpponentEntity.GetTag(GameTag.OVERLOAD_OWED), -1,
+                            e.Info.Created, ""));
                         }
                     }
                 }
@@ -263,14 +419,17 @@ namespace HDT.Plugins.MetaDetector
 
         public void OpponentHeroPower()
         {
-            int turn = Core.Game.OpponentEntity.GetTag(GameTag.TURN);
-            _cardsPlayedOpponent.Add("HERO_POWER", turn, false, -1, false, -1, "Hero Power", Core.Game.OpponentEntity.GetTag(GameTag.RESOURCES), Core.Game.OpponentEntity.GetTag(GameTag.OVERLOAD_OWED), "Opponent");
+            _cardsPlayedOpponent.Add("HERO_POWER", Convert.ToInt16(Math.Ceiling(Core.Game.GameEntity.GetTag(GameTag.TURN) / 2.0)), false, -1, false, -1, "Hero Power", Core.Game.OpponentEntity.GetTag(GameTag.RESOURCES), Core.Game.OpponentEntity.GetTag(GameTag.OVERLOAD_OWED), "Opponent");
+            MetaLog.Info("Turn " + _opponentTurnCount + ": Opponent Hero Power", "OpponentHeroPower");
         }
 
         public void PlayerHeroPower()
         {
-            int turn = Core.Game.PlayerEntity.GetTag(GameTag.TURN);
-            _cardsPlayedOpponent.Add("HERO_POWER", turn, false, -1, false, -1, "Hero Power", Core.Game.PlayerEntity.GetTag(GameTag.RESOURCES), Core.Game.PlayerEntity.GetTag(GameTag.OVERLOAD_OWED), "Player");
+            if (Core.Game.Opponent.HasCoin && _playerTurnCount == 0)
+                _playerTurnCount++;
+
+            _cardsPlayedOpponent.Add("HERO_POWER", Convert.ToInt16(Math.Ceiling(Core.Game.GameEntity.GetTag(GameTag.TURN)/2.0)), false, -1, false, -1, "Hero Power", Core.Game.PlayerEntity.GetTag(GameTag.RESOURCES), Core.Game.PlayerEntity.GetTag(GameTag.OVERLOAD_OWED), "Player");
+            MetaLog.Info("Turn " + _playerTurnCount + ": Player Hero Power", "PlayerHeroPower");
         }
 
         public void OpponentPlayToGraveyard(Card c)
@@ -342,7 +501,7 @@ namespace HDT.Plugins.MetaDetector
             //get all cards played / died in the game
             try
             {
-                foreach (var x in Core.Game.Opponent.Graveyard)
+                foreach (var x in Core.Game.Opponent.Graveyard.Where(x => !x.IsHero && !x.IsHeroPower && x.CardId != ""))
                 {
                     CardInfo temp;
                     if (_trackOpponentCards.TryGetValue(x.Id, out temp))
@@ -351,7 +510,7 @@ namespace HDT.Plugins.MetaDetector
                     }
                 }
 
-                foreach (var x in Core.Game.Player.Graveyard)
+                foreach (var x in Core.Game.Player.Graveyard.Where(x => !x.IsHero && !x.IsHeroPower && x.CardId != ""))
                 {
                     CardInfo temp;
                     if (_trackPlayerCards.TryGetValue(x.Id, out temp))
@@ -361,16 +520,16 @@ namespace HDT.Plugins.MetaDetector
                 }
 
                 //_cardsPlayed.Clear();
-                foreach (CardInfo x in _trackOpponentCards.Values.Where(x => x.cardId != "").OrderBy(x => x.turnCardPlayed).ToList())
+                foreach (CardInfo x in _trackOpponentCards.Values.Where(x => x.cardId != "" && x.cardId != null).OrderBy(x => x.turnCardPlayed).ToList())
                 {
                     _cardsPlayedOpponent.Add(x.cardId, x.turnCardPlayed, x.created, x.turnInHand, x.mulligan,
-                        x.turnCardDied, Database.GetCardFromId(x.cardId).Name, x.mana, x.manaoverload, "Opponent");
+                        x.turnCardDied, Database.GetCardFromId(x.cardId).Name, x.mana, x.manaoverload, "Opponent", x.createdBy);
                 }
 
-                foreach (CardInfo x in _trackPlayerCards.Values.Where(x => x.cardId != "").OrderBy(x => x.turnCardPlayed).ToList())
+                foreach (CardInfo x in _trackPlayerCards.Values.Where(x => x.cardId != "" && x.cardId != null).OrderBy(x => x.turnCardPlayed).ToList())
                 {
                     _cardsPlayedOpponent.Add(x.cardId, x.turnCardPlayed, x.created, x.turnInHand, x.mulligan,
-                        x.turnCardDied, Database.GetCardFromId(x.cardId).Name, x.mana, x.manaoverload, "Player");
+                        x.turnCardDied, Database.GetCardFromId(x.cardId).Name, x.mana, x.manaoverload, "Player", x.createdBy);
                 }
 
                 if (Core.Game.CurrentGameStats.Result == GameResult.Win)
@@ -844,11 +1003,12 @@ namespace HDT.Plugins.MetaDetector
         public int turnCardDied;
         public bool mulligan;
         public bool created;
+        public string createdBy;
         public int mana;
         public int manaoverload;
 
         public CardInfo(int InHand, bool mul = false, string scardId = "",
-            int nturnplayed = -1, int nmana = -1, int nmanaoverload = -1, int nturndied = -1)
+            int nturnplayed = -1, int nmana = -1, int nmanaoverload = -1, int nturndied = -1, bool bCreated = false, string sCreatedBy = "")
         {
             this.mulligan = mul;
             this.turnInHand = InHand;
@@ -857,6 +1017,8 @@ namespace HDT.Plugins.MetaDetector
             this.mana = nmana;
             this.manaoverload = nmanaoverload;
             this.turnCardDied = nturndied;
+            this.created = bCreated;
+            this.createdBy = sCreatedBy;
         }
     }
 
@@ -889,6 +1051,7 @@ namespace HDT.Plugins.MetaDetector
         public int mana { get; set; }
         public int manaOverload { get; set; }
         public bool isCreated { get; set; }
+        public string createdBy { get; set; }
         public string activePlayer { get; set; }
 
         private List<trackCards> _cardsPlayed = new List<trackCards>();
@@ -903,8 +1066,10 @@ namespace HDT.Plugins.MetaDetector
             this.mulligan = false;
         }
 
-        public void Add(string cardId, int nturn, bool isCreated, int nturnInHand, bool bmulligan,
-            int nturnCardDied, string sName = "", int nMana = -1, int nManaOverload = -1, string sActivePlayer = "Opponent")
+        public void Add(string cardId, int nturn, bool isCreated,
+            int nturnInHand, bool bmulligan,
+            int nturnCardDied, string sName = "", int nMana = -1,
+            int nManaOverload = -1, string sActivePlayer = "Opponent", string createdBy = "")
         {
             trackCards temp = new trackCards();
 
@@ -926,6 +1091,7 @@ namespace HDT.Plugins.MetaDetector
             temp.opponentWin = false;
             temp.playerWin = false;
             temp.isCreated = isCreated;
+            temp.createdBy = createdBy;
             temp.turnDrawn = nturnInHand;
             temp.mulligan = bmulligan;
             temp.turnToGraveyard = nturnCardDied;
