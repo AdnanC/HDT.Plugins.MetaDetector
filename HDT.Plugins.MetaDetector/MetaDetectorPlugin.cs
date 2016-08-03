@@ -71,7 +71,7 @@ namespace HDT.Plugins.MetaDetector
                 GameEvents.OnOpponentSecretTriggered.Add(_MetaDetector.OpponentSecretTriggered);
                 GameEvents.OnOpponentPlayToGraveyard.Add(_MetaDetector.OpponentPlayToGraveyard);
                 GameEvents.OnOpponentMulligan.Add(_MetaDetector.OpponentMulligan);
-
+                
                 GameEvents.OnPlayerDraw.Add(_MetaDetector.PlayerDraw);
                 GameEvents.OnPlayerPlay.Add(_MetaDetector.PlayerPlay);
                 GameEvents.OnPlayerCreateInPlay.Add(_MetaDetector.PlayerCreateInPlay);

@@ -206,7 +206,50 @@ namespace HDT.Plugins.MetaDetector
 
         public void OpponentSecretTriggered(Card c)
         {
-            updateOpponentCardsPlayed();
+            try
+            {
+                foreach (Entity e in Core.Game.Entities.Where(x => x.Value.CardId != null && !x.Value.IsHeroPower
+                && !x.Value.IsHero && x.Value.GetTag(GameTag.CONTROLLER) == Core.Game.Opponent.Id
+                && x.Value.IsSecret).Select(x => x.Value))
+                {
+                    CardInfo temp;
+                    if (_trackOpponentCards.TryGetValue(e.Id, out temp))
+                    {
+                        if (_trackOpponentCards[e.Id].cardId == "")
+                        {
+                            _trackOpponentCards[e.Id].cardId = e.CardId;
+                            _trackOpponentCards[e.Id].turnCardPlayed = e.Info.Turn;
+                            _trackOpponentCards[e.Id].mana = Core.Game.OpponentEntity.GetTag(GameTag.RESOURCES);
+                            _trackOpponentCards[e.Id].manaoverload = Core.Game.OpponentEntity.GetTag(GameTag.OVERLOAD_OWED);
+
+                            if (e.GetTag(GameTag.CREATOR) > 0)
+                            {
+                                _trackOpponentCards[e.Id].created = e.Info.Created;
+                                _trackOpponentCards[e.Id].createdBy = Core.Game.Entities[e.GetTag(GameTag.CREATOR)].CardId;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (e.GetTag(GameTag.CREATOR) > 0)
+                        {
+                            _trackOpponentCards.Add(e.Id, new CardInfo(-1, false, e.CardId, e.Info.Turn,
+                            Core.Game.OpponentEntity.GetTag(GameTag.RESOURCES), Core.Game.OpponentEntity.GetTag(GameTag.OVERLOAD_OWED), -1,
+                            e.Info.Created, Core.Game.Entities[e.GetTag(GameTag.CREATOR)].CardId));
+                        }
+                        else
+                        {
+                            _trackOpponentCards.Add(e.Id, new CardInfo(-1, false, e.CardId, e.Info.Turn,
+                            Core.Game.OpponentEntity.GetTag(GameTag.RESOURCES), Core.Game.OpponentEntity.GetTag(GameTag.OVERLOAD_OWED), -1,
+                            e.Info.Created, ""));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
+            }
         }
 
         public void OpponentDraw()
@@ -372,9 +415,12 @@ namespace HDT.Plugins.MetaDetector
         {
             try
             {
-                foreach (Entity e in Core.Game.Entities.Where(x => x.Value.CardId != null && !x.Value.IsHeroPower
+                foreach (Entity e in Core.Game.Entities.Select(v => v.Value).Where( x => x.CardId != null && !x.IsHeroPower
+                         && !x.IsHero && x.GetTag(GameTag.CONTROLLER) == Core.Game.Opponent.Id && x.IsInPlay)
+                    )
+/*                foreach (Entity e in Core.Game.Entities.Where(x => x.Value.CardId != null && !x.Value.IsHeroPower
                 && !x.Value.IsHero && x.Value.GetTag(GameTag.CONTROLLER) == Core.Game.Opponent.Id
-                && x.Value.IsInPlay).Select(x => x.Value))
+                && x.Value.IsInPlay).Select(x => x.Value))*/
                 {
                     CardInfo temp;
                     if (_trackOpponentCards.TryGetValue(e.Id, out temp))
@@ -412,7 +458,7 @@ namespace HDT.Plugins.MetaDetector
             }
             catch (Exception ex)
             {
-                MetaLog.Error(ex);
+                //MetaLog.Error(ex);
             }
 
         }
@@ -439,15 +485,15 @@ namespace HDT.Plugins.MetaDetector
 
         public async void GameEnd()
         {
-            string matchedDeck = "";
+            //string matchedDeck = "";
 
             try
             {
-                if (_metaDecks != null)
+                /*if (_metaDecks != null)
                 {
                     if (_metaDecks.Count < 10)
-                        matchedDeck = _metaDecks.First().DeckId.ToString();
-                }
+                        matchedDeck = _metaDecks.FirstOrDefault().DeckId.ToString();
+                }*/
             }
             catch (Exception ex)
             {
@@ -642,6 +688,9 @@ namespace HDT.Plugins.MetaDetector
                 {
                     _metaDecks = XmlManager<List<Deck>>.Load(_deckFilename);
                     _matchedDecks = new List<Deck>(_metaDecks);
+
+                    if (_matchedDecks.Count == 0)
+                        DownloadMetaFile();
 
                     //_mainWindow.updateDeckList(_metaDecks);
                     //Log.Info(code.ToString());
