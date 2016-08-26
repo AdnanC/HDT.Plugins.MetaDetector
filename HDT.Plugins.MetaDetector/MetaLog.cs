@@ -13,7 +13,7 @@ namespace HDT.Plugins.MetaDetector.Logging
     public class MetaLog
     {
         private const int MaxLogFileAge = 2;
-        private const int KeepOldLogs = 15;
+        private const int KeepOldLogs = 1;
 
         private static string logDir = Path.Combine(Config.Instance.DataDir, @"MetaDetector\Logs");
         private static string logFile = Path.Combine(logDir, "meta_log.txt");
@@ -36,10 +36,10 @@ namespace HDT.Plugins.MetaDetector.Logging
                             //can access log file => no other instance of same installation running
                         }
                         File.Move(logFile, logFile.Replace(".txt", "_" + DateTime.Now.ToUnixTime() + ".txt"));
-                        //keep logs from the last 2 days plus 15 before that
+                        //keep logs from the last 2 days plus 1 before that
                         foreach (var file in
                             new DirectoryInfo(logDir).GetFiles("meta_log*")
-                                                     .Where(x => x.LastWriteTime < DateTime.Now.AddDays(-MaxLogFileAge))
+                                                     .Where(x => x.CreationTime < DateTime.Now.AddDays(-MaxLogFileAge))
                                                      .OrderByDescending(x => x.LastWriteTime)
                                                      .Skip(KeepOldLogs))
                         {
@@ -49,6 +49,7 @@ namespace HDT.Plugins.MetaDetector.Logging
                             }
                             catch
                             {
+                                
                             }
                         }
                     }

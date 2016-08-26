@@ -47,9 +47,8 @@ namespace HDT.Plugins.MetaDetector
 
         public void OnLoad()
         {
-            if (_MainWindow == null)
+            try
             {
-
                 _MainWindow = new OpDeckWindow();
 
                 _MetaDetectorMenuItem = new PluginMenu(_MainWindow);
@@ -65,25 +64,32 @@ namespace HDT.Plugins.MetaDetector
 
                 GameEvents.OnOpponentPlay.Add(_MetaDetector.OpponentPlay);
                 GameEvents.OnOpponentDraw.Add(_MetaDetector.OpponentDraw);
+
                 GameEvents.OnOpponentCreateInPlay.Add(_MetaDetector.OpponentCreateInPlay);
                 GameEvents.OnOpponentCreateInDeck.Add(_MetaDetector.OpponentCreateInDeck);
                 GameEvents.OnOpponentHeroPower.Add(_MetaDetector.OpponentHeroPower);
                 GameEvents.OnOpponentSecretTriggered.Add(_MetaDetector.OpponentSecretTriggered);
                 GameEvents.OnOpponentPlayToGraveyard.Add(_MetaDetector.OpponentPlayToGraveyard);
                 GameEvents.OnOpponentMulligan.Add(_MetaDetector.OpponentMulligan);
-                
+
                 GameEvents.OnPlayerDraw.Add(_MetaDetector.PlayerDraw);
                 GameEvents.OnPlayerPlay.Add(_MetaDetector.PlayerPlay);
                 GameEvents.OnPlayerCreateInPlay.Add(_MetaDetector.PlayerCreateInPlay);
                 GameEvents.OnPlayerCreateInDeck.Add(_MetaDetector.PlayerCreateInDeck);
                 GameEvents.OnPlayerHeroPower.Add(_MetaDetector.PlayerHeroPower);
-                GameEvents.OnPlayerMulligan.Add(_MetaDetector.PlayerMulligan);                
+                GameEvents.OnPlayerMulligan.Add(_MetaDetector.PlayerMulligan);
 
                 CheckForUpdate();
 
                 //_MainWindow.Show();
                 //_MainWindow.Visibility = System.Windows.Visibility.Hidden;
                 MetaLog.Info("Plugin Load Successful");
+
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
+                MetaLog.Info("Plugin Load Unsuccessful");
             }
         }
 
@@ -102,7 +108,7 @@ namespace HDT.Plugins.MetaDetector
 
         public Version Version
         {
-            get { return new Version(0, 0, 7); }
+            get { return new Version(0, 0, 8); }
         }
 
         private async void CheckForUpdate()
