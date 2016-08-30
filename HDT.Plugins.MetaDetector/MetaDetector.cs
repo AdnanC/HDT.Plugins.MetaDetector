@@ -674,7 +674,7 @@ namespace HDT.Plugins.MetaDetector
                 string currentVersion = _appConfig.currentVersion;
                 DateTime lastCheck = _appConfig.lastCheck;
 
-                if ((DateTime.Now - lastCheck).TotalDays > 3)
+                if ((DateTime.Now - lastCheck).TotalDays > 2)
                 {
                     MetaLog.Info("Checking for new version of Meta File", "checkNewVersion");
                     WebClient client = new WebClient();
@@ -685,15 +685,14 @@ namespace HDT.Plugins.MetaDetector
                         if (versionNumber != currentVersion)
                         {
                             DownloadMetaFile();
-
-                            _appConfig.currentVersion = versionNumber;
-                            _appConfig.lastCheck = DateTime.Now;
-                            _appConfig.Save();
-                            return true;
                         }
                     }
-                }
 
+                    _appConfig.currentVersion = versionNumber;
+                    _appConfig.lastCheck = DateTime.Now;
+                    _appConfig.Save();
+                    return true;
+                }
                 return false;
             }
             catch (Exception ex)
@@ -736,6 +735,8 @@ namespace HDT.Plugins.MetaDetector
 
         private void checkClassDecks()
         {
+            MetaLog.Info("Check Class Deck Files", "checkClassDecks");
+
             if (checkNewVersion())
                 return;
 
@@ -852,7 +853,7 @@ namespace HDT.Plugins.MetaDetector
         {
             try
             {
-                MetaLog.Info("Downloing Meta File");
+                MetaLog.Info("Downloading Meta File");
                 using (WebClient wc = new WebClient())
                 {
                     _downloadingMetaFile = true;

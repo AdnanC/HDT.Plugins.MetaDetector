@@ -108,7 +108,7 @@ namespace HDT.Plugins.MetaDetector
 
         public Version Version
         {
-            get { return new Version(0, 0, 8); }
+            get { return new Version(0, 0, 9); }
         }
 
         private async void CheckForUpdate()
