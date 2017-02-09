@@ -10,4 +10,4 @@ This Hearthstone Deck Tracker plugin tries to detect what deck opponent is playi
 1. Download the latest version from https://github.com/adnanc/HDT.Plugins.MetaDetector/releases
 2. Then unzip the release into the HDT Plugins directory (this directory can be opened with Options > Tracker > Plugins > Plugins Folder)
 3. The directory should look like Plugins/MetaDetector/[some files]
-4. Enable the plugin from Options > Tracker > Plugins. ***If you are already using MetaStats plugin, please disable that, as it will cause data conflict***.
+4. Enable the plugin from Options > Tracker > Plugins. ***If you are already using MetaStats plugin, please disable that, it will cause data conflict***.
