@@ -4,15 +4,10 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:HDT.Plugins.MetaDetector.Controls"
-             mc:Ignorable="d" WindowStyle="ToolWindow" Title="New Version Available !" Height="139.466" Topmost="True" Width="420.964">
+             mc:Ignorable="d" WindowStyle="ToolWindow" Title="MetaDetector Plugin Error" Height="139.466" Topmost="True" Width="420.964" WindowStartupLocation="CenterOwner">
     <Grid>
         <TextBlock x:Name="textBlock" Margin="10" TextWrapping="Wrap" FontSize="18" Foreground="#FFD82828">
-        New version available for MetaDetector Plugin.<LineBreak/><LineBreak/>
-        <Hyperlink 
-            NavigateUri="https://github.com/adnanc/HDT.Plugins.MetaDetector/releases"
-            RequestNavigate="Hyperlink_RequestNavigate">
-            Please click here to download the latest version.
-        </Hyperlink>
+        MetaStats Plugin is currently active. Please disable it to avoid duplicate data submission.<LineBreak/>
         </TextBlock>
     </Grid>
 </Window>

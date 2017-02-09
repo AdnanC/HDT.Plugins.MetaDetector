@@ -5,6 +5,12 @@ using Hearthstone_Deck_Tracker.Plugins;
 using HDT.Plugins.MetaDetector.Controls;
 using HDT.Plugins.MetaDetector.Logging;
 using System.Threading.Tasks;
+using System.Net;
+using System.IO;
+using Hearthstone_Deck_Tracker;
+using System.ComponentModel;
+using System.Linq;
+using System.Xml.Linq;
 
 namespace HDT.Plugins.MetaDetector
 {
@@ -47,6 +53,28 @@ namespace HDT.Plugins.MetaDetector
 
         public void OnLoad()
         {
+
+            var xml = XDocument.Load(Config.Instance.DataDir + @"\plugins.xml");
+
+            // Query the data and write out a subset of contacts
+            /*var query = from c in xml.Root.Descendants("ArrayOfPluginSettings")
+                        where c.Element("FileName").Value.ToString() == "Plugins/MetaStats/MetaStats.dll"
+                        select c.Element("IsEnabled");*/
+
+            var allPlugins = xml.Root.Descendants("PluginSettings").Where(x => x.Element("IsEnabled").Value == "true");
+
+            MetaLog.Info("Testing XML: " + allPlugins);
+
+            foreach (var enabledPluging in allPlugins)
+            {
+                if (enabledPluging.Element("Name").Value.Trim() == "Meta Stats")
+                {
+                    VersionWindow _ver = new VersionWindow();
+                    _ver.Show();
+                    //throw new Exception("MetaStats Plugin already Enabled. Please Disable that first.");
+                }
+            }
+
             try
             {
                 _MainWindow = new OpDeckWindow();
@@ -113,12 +141,44 @@ namespace HDT.Plugins.MetaDetector
 
         private async void CheckForUpdate()
         {
-            var latest = await GitHub.CheckForUpdate("adnanc", "HDT.Plugins.MetaDetector", Version);
-            if (latest != null)
+            try
             {
-                _MainWindow.newVersionAvailable();
-                VersionWindow newVersion = new VersionWindow();
-                newVersion.Show();
+                var latest = await GitHub.CheckForUpdate("adnanc", "HDT.Plugins.MetaDetector", Version);
+                if (latest != null)
+                {
+                    //_MainWindow.newVersionAvailable();
+                    //VersionWindow newVersion = new VersionWindow();
+                    //newVersion.Show();
+                    string pluginDLL = Path.Combine(Config.Instance.DataDir, @"Plugins\MetaDetector\MetaDetector.tmp");
+
+                    using (WebClient wc = new WebClient())
+                    {
+                        wc.DownloadFileCompleted += (wc_DownloadFileCompleted);
+                        wc.DownloadFileAsync(new Uri("https://s3.amazonaws.com/metadetector/MetaDetector.dll"), pluginDLL);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
+            }
+        }
+
+        void wc_DownloadFileCompleted(object sender, AsyncCompletedEventArgs e)
+        {
+            try
+            {
+                string tempFile = Path.Combine(Config.Instance.DataDir, @"Plugins\MetaDetector\MetaDetector.tmp");
+                string pluginDLL = Path.Combine(Config.Instance.DataDir, @"Plugins\MetaDetector\MetaDetector.dll");
+                if (File.Exists(tempFile))
+                {
+                    File.Copy(tempFile, pluginDLL, true);
+                    File.Delete(tempFile);
+                }
+            }
+            catch (Exception ex)
+            {
+                MetaLog.Error(ex);
             }
         }
     }

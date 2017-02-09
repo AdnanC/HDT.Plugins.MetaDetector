@@ -67,16 +67,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="HearthDb">
-      <HintPath>..\..\Hearthstone-Deck-Tracker\HearthDb\HearthDb\bin\x86\Debug\HearthDb.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\bin\x86\Debug\HearthDb.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="HearthMirror, Version=5.2.2.13807, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\Hearthstone-Deck-Tracker\HearthMirror\HearthMirror\bin\x86\Debug\HearthMirror.dll</HintPath>
+    <Reference Include="HearthMirror">
+      <HintPath>..\..\..\..\..\..\..\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\bin\x86\Debug\HearthMirror.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="HearthstoneDeckTracker">
-      <HintPath>..\..\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\bin\x86\Debug\HearthstoneDeckTracker.exe</HintPath>
+      <HintPath>..\..\..\..\..\..\..\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\bin\x86\Debug\HearthstoneDeckTracker.exe</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="MahApps.Metro, Version=1.2.4.0, Culture=neutral, PublicKeyToken=f4fb5a3c4d1e5b4f, processorArchitecture=MSIL">

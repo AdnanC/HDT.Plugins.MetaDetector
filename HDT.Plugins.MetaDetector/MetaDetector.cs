@@ -49,6 +49,8 @@ namespace HDT.Plugins.MetaDetector
         Dictionary<int, CardInfo> _trackOpponentCards = new Dictionary<int, CardInfo>();
         Dictionary<int, CardInfo> _trackPlayerCards = new Dictionary<int, CardInfo>();
 
+        private List<Card> gameOpCardList = new List<Card>();
+
         public MetaDetector(OpDeckWindow mainWindow)
         {
             //_mainWindow = new OpDeckWindow();
@@ -1159,7 +1161,7 @@ namespace HDT.Plugins.MetaDetector
                     {
                         MetaLog.Info("Uploading Card Stats...", "sendRequest");
 
-                        string url = "http://metastats.net/metadetector/cards.php?v=0.0.8d";
+                        string url = "http://metastats.net/metadetector/cards.php?v=0.0.9d";
 
                         string postData = _cardsPlayedOpponent.GetCardStats();
 
