@@ -54,6 +54,8 @@ namespace HDT.Plugins.MetaDetector
         public MetaDetector(OpDeckWindow mainWindow)
         {
             //_mainWindow = new OpDeckWindow();
+            MetaLog.Initialize();
+
             _mainWindow = mainWindow;
             _lastGuessDeck = new Deck();
 
@@ -68,7 +70,11 @@ namespace HDT.Plugins.MetaDetector
 
             _appConfig = MyConfig.Load();
             _appConfig.Save();
-            MetaLog.Initialize();
+
+            _mainWindow.setOverlay(_appConfig.showOverlay);
+            _mainWindow.setTopMost(_appConfig.topMost);
+
+            
 
             MetaLog.Info("Meta Detector Initialized", "MetaDetector");
         }
@@ -660,7 +666,20 @@ namespace HDT.Plugins.MetaDetector
                         }
 
                         if (displayDecks != null && displayDecks.Count > 0)
+                        {
                             _mainWindow.updateDeckList(displayDecks);
+                        }
+
+                        if (_matchedDecks.Count > 0 && _mainWindow.showOverlay)
+                        {
+                            Core.Game.Opponent.InDeckPrecitions.Clear();
+
+                            foreach (Card c in _matchedDecks[0].Cards.OrderBy(x => x.Cost))
+                            {
+                                if (!Core.Game.Opponent.OpponentCardList.Contains(c))
+                                    Core.Game.Opponent.InDeckPrecitions.Add(new PredictedCard(c.Id, 0));
+                            }
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -1077,7 +1096,7 @@ namespace HDT.Plugins.MetaDetector
 
                                 //int count = d.Cards.Intersect(Core.Game.Opponent.PlayerCardList.Where(x => !x.IsCreated)).ToList().Count();
                                 int count = opponentCards.Intersect(matchDeckCards).Count();
-                                
+
                                 if (count > 0)
                                 {
                                     if (count > lastCount)
@@ -1102,6 +1121,7 @@ namespace HDT.Plugins.MetaDetector
                         }
 
                         _matchedDecks = new List<Deck>(validDecks);
+
 
                         if (validDecks.Count > 15)
                             validDecks = validDecks.Take(15).ToList();
@@ -1198,6 +1218,13 @@ namespace HDT.Plugins.MetaDetector
                 MetaLog.Error(ex);
                 return null;
             }
+        }
+
+        public void saveConfig()
+        {
+            _appConfig.showOverlay = _mainWindow.showOverlay;
+            _appConfig.topMost = _mainWindow.Topmost;
+            _appConfig.Save();
         }
 
         internal async Task<string> sendMetaRanks()
@@ -1498,6 +1525,8 @@ namespace HDT.Plugins.MetaDetector
         public string currentVersion { get; set; }
         public DateTime lastCheck { get; set; }
         public DateTime lastUpload { get; set; }
+        public bool showOverlay { get; set; }
+        public bool topMost { get; set; }
 
         public MyConfig()
         {
@@ -1509,6 +1538,8 @@ namespace HDT.Plugins.MetaDetector
             this.currentVersion = v;
             this.lastCheck = c;
             this.lastUpload = u;
+            this.showOverlay = true;
+            this.topMost = false;
         }
 
         public static MyConfig Load()

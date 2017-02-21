@@ -63,7 +63,7 @@ namespace HDT.Plugins.MetaDetector
 
             var allPlugins = xml.Root.Descendants("PluginSettings").Where(x => x.Element("IsEnabled").Value == "true");
 
-            MetaLog.Info("Testing XML: " + allPlugins);
+            //MetaLog.Info("Testing XML: " + allPlugins);
 
             foreach (var enabledPluging in allPlugins)
             {
@@ -77,6 +77,7 @@ namespace HDT.Plugins.MetaDetector
 
             try
             {
+
                 _MainWindow = new OpDeckWindow();
 
                 _MetaDetectorMenuItem = new PluginMenu(_MainWindow);
@@ -123,6 +124,7 @@ namespace HDT.Plugins.MetaDetector
 
         public void OnUnload()
         {
+            _MetaDetector.saveConfig();
             _MainWindow.Close();
             _MetaDetector = null;
             _MainWindow = null;
@@ -136,7 +138,7 @@ namespace HDT.Plugins.MetaDetector
 
         public Version Version
         {
-            get { return new Version(0, 0, 9); }
+            get { return new Version(0, 0, 10); }
         }
 
         private async void CheckForUpdate()

@@ -14,6 +14,9 @@ namespace HDT.Plugins.MetaDetector.Controls
     /// </summary>
     public partial class OpDeckWindow
     {
+        public bool showOverlay = false;
+        public bool topMost = false;
+
         public OpDeckWindow()
         {
             InitializeComponent();
@@ -150,6 +153,44 @@ namespace HDT.Plugins.MetaDetector.Controls
             {
                 MetaLog.Error(ex);
             }
+        }
+
+        private void cbAlwaysOnTop_Checked(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (cbAlwaysOnTop.IsChecked.Value == true)
+            {
+                this.Topmost = true;
+            }
+        }
+
+        private void cbAlwaysOnTop_Unchecked(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (cbAlwaysOnTop.IsChecked.Value == false)
+            {
+                this.Topmost = false;
+            }
+        }
+
+        private void cbOverlay_Checked(object sender, System.Windows.RoutedEventArgs e)
+        {
+            showOverlay = true;
+        }
+
+        private void cbOverlay_Unchecked(object sender, System.Windows.RoutedEventArgs e)
+        {
+            showOverlay = false;
+        }
+
+        public void setOverlay(bool overlay)
+        {
+            this.showOverlay = overlay;
+            cbOverlay.IsChecked = overlay;
+        }
+
+        public void setTopMost(bool topmost)
+        {
+            this.Topmost = topmost;
+            cbAlwaysOnTop.IsChecked = topmost;
         }
     }
 }

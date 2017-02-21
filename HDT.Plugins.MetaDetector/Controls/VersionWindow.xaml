@@ -7,7 +7,7 @@
              mc:Ignorable="d" WindowStyle="ToolWindow" Title="MetaDetector Plugin Error" Height="139.466" Topmost="True" Width="420.964" WindowStartupLocation="CenterOwner">
     <Grid>
         <TextBlock x:Name="textBlock" Margin="10" TextWrapping="Wrap" FontSize="18" Foreground="#FFD82828">
-        MetaStats Plugin is currently active. Please disable it to avoid duplicate data submission.<LineBreak/>
+        MetaStats Plugin is currently active. Please disable MetaStats plugin and restart HDT to avoid data conflict.<LineBreak/>
         </TextBlock>
     </Grid>
 </Window>

@@ -8,14 +8,14 @@
     <Grid>
         <TextBlock x:Name="tbInformation" Margin="4,10,108,0" TextWrapping="NoWrap" Foreground="White" VerticalAlignment="Top" Height="16"/>
         <TextBlock x:Name="tbMetaRank" Margin="5,0,164,40" TextWrapping="Wrap" Foreground="#FFFDFDFD" Height="16" VerticalAlignment="Bottom"/>
-        <ListBox x:Name="lbDecks" HorizontalAlignment="Left" Margin="246,49,0,61" Width="93" SelectionChanged="lbDecks_SelectionChanged" MouseDown="lbDecks_MouseDown"/>
+        <ListBox x:Name="lbDecks" HorizontalAlignment="Left" Margin="246,51,0,61" Width="93" SelectionChanged="lbDecks_SelectionChanged" MouseDown="lbDecks_MouseDown"/>
         <ListView x:Name="lvDeckList" HorizontalAlignment="Left" 
                   Foreground="White" FontWeight="Bold" BorderThickness="1" 
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   
                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
                                     ScrollViewer.CanContentScroll="True" FontFamily="Arial"
-                  Margin="5,49,0,61"  Width="236" Height="auto">
+                  Margin="5,51,0,61"  Width="236" Height="auto">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <local:TemplateCard/>
@@ -39,6 +39,8 @@
             </Hyperlink>
         </TextBlock>
         <TextBlock x:Name="tbVersion" HorizontalAlignment="Left" Margin="31,0,0,6" TextWrapping="Wrap" VerticalAlignment="Bottom" Height="29" Width="87" Foreground="White" Padding="0,4,0,0"/>
+        <CheckBox x:Name="cbAlwaysOnTop" Content="Always on Top" HorizontalAlignment="Left" Margin="232,31,0,0" VerticalAlignment="Top" Checked="cbAlwaysOnTop_Checked" Unchecked="cbAlwaysOnTop_Unchecked" BorderBrush="White"/>
+        <CheckBox x:Name="cbOverlay" Content="Show in Opponent Overlay" HorizontalAlignment="Left" Margin="10,31,0,0" VerticalAlignment="Top"  BorderBrush="White" Checked="cbOverlay_Checked" Unchecked="cbOverlay_Unchecked"/>
 
     </Grid>
 </Window>
