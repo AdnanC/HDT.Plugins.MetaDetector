@@ -8,7 +8,7 @@ This Hearthstone Deck Tracker plugin tries to detect what deck your opponent is 
 # Installation
 
 1. Download the latest version from https://github.com/adnanc/HDT.Plugins.MetaDetector/releases
-2. Then unzip the release into the HDT Plugins directory (this directory can be opened with Options > Tracker > Plugins > Plugins Folder)
+2. Then unzip the release into the HDT Plugins directory; this directory can be opened through Hearthstone Deck Tracker > Options > Tracker > Plugins > Plugins Folder or go to %AppData%\HearthstoneDeckTracker\Plugins
 3. The directory should look like Plugins/MetaDetector/[some files]
-4. Enable the plugin from Options > Tracker > Plugins. ***If you are already using MetaStats plugin, please disable that, it will cause data conflict***.
+4. Enable the plugin from Options > Tracker > Plugins. You can use both MetaStats and MetaDetector together now.
 5. If the plugin does not show up in that list, right click 'MetaDetector.dll', go into Properties and click "Unblock" at the bottom.
